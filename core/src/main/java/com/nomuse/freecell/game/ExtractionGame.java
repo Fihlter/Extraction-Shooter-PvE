@@ -59,7 +59,7 @@ public class ExtractionGame extends ApplicationAdapter {
         mapManager = new MapManager(modelBuilder);
 
         // Create melee weapon
-        swordModel = modelBuilder.createBox(0.2f, 0.2f, 1.5f,
+        swordModel = modelBuilder.createBox(0.2f, 1.5f, 0.2f,
             new Material(ColorAttribute.createDiffuse(Color.LIGHT_GRAY)),
             VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
         swordInstance = new ModelInstance(swordModel);
@@ -152,15 +152,18 @@ public class ExtractionGame extends ApplicationAdapter {
         swordInstance.transform.rotate(Vector3.X, localPlayer.pitch);
 
         // Offset sword
-        swordInstance.transform.translate(0.5f, -0.4f, -1.0f);
+        swordInstance.transform.translate(0.5f, -0.4f, -0.8f);
+
+        //swordInstance.transform.rotate(Vector3.X, 15f);
+        //swordInstance.transform.rotate(Vector3.Z, 15f);
 
         // Animate sword swing
         if (localPlayer.isAttacking) {
             float progress = localPlayer.attackTimer / PlayerEntity.ATTACK_DURATION;
             // Swing down and to the left
-            float swingAngle = MathUtils.sin((float) (progress * Math.PI)) * 60f;
+            float swingAngle = MathUtils.sin((float) (progress * Math.PI)) * 80f;
             swordInstance.transform.rotate(Vector3.Z, swingAngle);
-            swordInstance.transform.rotate(Vector3.X, -swingAngle / 2f);
+            swordInstance.transform.rotate(Vector3.X, -swingAngle / 0.3f);
         }
     }
 
