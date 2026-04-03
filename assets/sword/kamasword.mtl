@@ -12,6 +12,6 @@ newmtl 02___Default
 	Kd 0.5882 0.5882 0.5882
 	Ks 0.0000 0.0000 0.0000
 	Ke 0.0000 0.0000 0.0000
-	map_Ka ??????_Diff_COLOR.jpg
-	map_Kd ??????_Diff_COLOR.jpg
+	map_Ka kamasword_Diff_COLOR.jpg
+	map_Kd kamasword_Diff_COLOR.jpg
 	map_bump -bm 0.3000 Map__6_Normal Bump.jpg

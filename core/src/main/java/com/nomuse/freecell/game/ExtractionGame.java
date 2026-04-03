@@ -5,6 +5,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.VertexAttributes;
 import com.badlogic.gdx.graphics.g3d.Environment;
 import com.badlogic.gdx.graphics.g3d.Material;
@@ -12,6 +13,7 @@ import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
+import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.loader.ObjLoader;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
@@ -34,6 +36,7 @@ public class ExtractionGame extends ApplicationAdapter {
     // Melee weapon visuals
     private Model swordModel;
     private ModelInstance swordInstance;
+    private Texture swordTexture;
 
     private float swordScale = 0.0025f;
 
@@ -65,6 +68,9 @@ public class ExtractionGame extends ApplicationAdapter {
         ObjLoader loader = new ObjLoader();
         swordModel = loader.loadModel(Gdx.files.internal("sword/kamasword.obj"));
         swordInstance = new ModelInstance(swordModel);
+
+        swordTexture = new Texture(Gdx.files.internal("sword/kamasword_Diff_Metal.jpg"));
+        swordInstance.materials.get(0).set(TextureAttribute.createDiffuse(swordTexture));
     }
 
     @Override
@@ -154,7 +160,7 @@ public class ExtractionGame extends ApplicationAdapter {
         swordInstance.transform.rotate(Vector3.X, localPlayer.pitch);
 
         // Offset sword
-        swordInstance.transform.translate(0.5f, -0.4f, -0.8f);
+        swordInstance.transform.translate(0.75f, -0.15f, -0.8f);
 
         //swordInstance.transform.rotate(Vector3.X, 15f);
         //swordInstance.transform.rotate(Vector3.Z, 15f);
@@ -167,9 +173,9 @@ public class ExtractionGame extends ApplicationAdapter {
         if (localPlayer.isAttacking) {
             float progress = localPlayer.attackTimer / PlayerEntity.ATTACK_DURATION;
             // Swing down and to the left
-            float swingAngle = MathUtils.sin((float) (progress * Math.PI)) * 80f;
-            swordInstance.transform.rotate(Vector3.Z, swingAngle);
-            swordInstance.transform.rotate(Vector3.X, -swingAngle / 0.3f);
+            float swingAngle = MathUtils.sin((float) (progress * Math.PI)) * 100f;
+            swordInstance.transform.rotate(Vector3.Z, -swingAngle);
+            swordInstance.transform.rotate(Vector3.X, -swingAngle * 0.3f);
         }
     }
 
