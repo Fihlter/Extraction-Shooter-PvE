@@ -55,7 +55,7 @@ public class ExtractionGame extends ApplicationAdapter {
     // Pre-allocate colors
     private final Color baseTorsoColor = new Color(Color.FIREBRICK);
     private final Color baseHeadColor = new Color(Color.MAROON);
-    private final Color baseLimbColor = new Color(Color.BROWN);
+    private final Color baseLimbColor = new Color(Color.DARK_GRAY);
     private final Color hitColor = new Color(Color.RED);
     private final Color workingColor = new Color();
 
@@ -262,7 +262,7 @@ public class ExtractionGame extends ApplicationAdapter {
         } else {
             batch.render(limbBrush, env);
         }
-        limbBrush.transform.set(tmpMatrix).translate(-0.1f, 0.6f, 0);
+        limbBrush.transform.set(tmpMatrix).translate(0.1f, -0.6f, 0);
         if (env == null) {
             batch.render(limbBrush);
         } else {
@@ -276,7 +276,7 @@ public class ExtractionGame extends ApplicationAdapter {
         } else {
             batch.render(limbBrush, env);
         }
-        limbBrush.transform.set(tmpMatrix).translate(-0.3f, 0, 0);
+        limbBrush.transform.set(tmpMatrix).translate(0.3f, 0, 0);
         if (env == null) {
             batch.render(limbBrush);
         } else {
