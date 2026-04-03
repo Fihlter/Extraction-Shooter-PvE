@@ -22,6 +22,7 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.BoundingBox;
+import com.badlogic.gdx.audio.Sound;
 
 public class ExtractionGame extends ApplicationAdapter {
     
@@ -53,6 +54,11 @@ public class ExtractionGame extends ApplicationAdapter {
     private Model enemyModel;
     private ModelInstance enemyBrush;
 
+    // Audio state
+    private Sound footstepSound;
+    private float footstepTimer = 0f;
+    private static final float FOOTSTEP_INTERVAL = 0.35f;
+
     @Override
     public void create() {
 
@@ -69,9 +75,13 @@ public class ExtractionGame extends ApplicationAdapter {
 
         ModelBuilder modelBuilder = new ModelBuilder();
 
+        // Setup environment
         environment = new Environment();
         environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f, 0.4f, 0.4f, 1f));
         
+        // Setup footsteps
+        footstepSound = Gdx.audio.newSound(Gdx.files.internal("sounds/footstep01.ogg"));
+
         shadowLight = new DirectionalShadowLight(4096, 4096, 45f, 45f, 1f, 300f);
         shadowLight.set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f);
 
@@ -279,6 +289,19 @@ public class ExtractionGame extends ApplicationAdapter {
         if (!mapManager.isColliding(localPlayer.x, localPlayer.z + dz, playerRadius)) {
             localPlayer.z += dz;
         }
+
+        // Footstep logic
+        boolean isMoving = (dx != 0 || dz != 0);
+
+        if (isMoving && localPlayer.isGrounded) {
+            if (footstepTimer >= FOOTSTEP_INTERVAL) {
+                footstepSound.play(1.0f, MathUtils.random(0.85f, 1.15f), 0f);
+                footstepTimer = 0f;
+            }
+            footstepTimer = 0f;
+        } else if (!isMoving && localPlayer.isGrounded) {
+            footstepTimer = FOOTSTEP_INTERVAL;
+        }
         
         // Jumping
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) && localPlayer.isGrounded) {
@@ -330,5 +353,6 @@ public class ExtractionGame extends ApplicationAdapter {
         mapManager.dispose();
         swordModel.dispose();
         enemyModel.dispose();
+        footstepSound.dispose();
     }
 }
