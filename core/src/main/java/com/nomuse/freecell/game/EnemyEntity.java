@@ -52,31 +52,39 @@ public class EnemyEntity {
             float moveX = dx * speed * deltaTime;
             float moveZ = dz * speed * deltaTime;
 
-            if (!mapManager.isColliding(x + moveX, z, radius) && !isCollidingWithOtherEnemies(x + moveX, z, allEnemies)) {
+            if (!mapManager.isColliding(x + moveX, z, radius)) {
                 x += moveX;
             }
-            if (!mapManager.isColliding(x, z + moveZ, radius) && !isCollidingWithOtherEnemies(x, z + moveZ, allEnemies)) {
+            if (!mapManager.isColliding(x, z + moveZ, radius)) {
                 z += moveZ;
             }
         }
+
+        applySoftCollision(mapManager, allEnemies);
     }
 
-    private boolean isCollidingWithOtherEnemies(float nextX, float nextZ, Array<EnemyEntity> allEnemies) {
+    private void applySoftCollision(MapManager mapManager, Array<EnemyEntity> allEnemies) {
         for (EnemyEntity other : allEnemies) {
             if (other == this) continue;
 
-            float diffX = nextX - other.x;
-            float diffZ = nextZ = other.z;
-
+            float diffX = x - other.x;
+            float diffZ = z - other.z;
             float distanceSquared = (diffX * diffX) + (diffZ * diffZ);
 
             float combinedRadii = this.radius + other.radius;
 
-            if (distanceSquared < (combinedRadii * combinedRadii)) {
-                return true;
+            if ((distanceSquared < combinedRadii) && distanceSquared > 0.001f) {
+                float distance = (float)Math.sqrt(distanceSquared);
+
+                float overlap = combinedRadii - distance;
+
+                float pushX = (diffX / distance) * (overlap * 0.5f);
+                float pushZ = (diffZ / distance) * (overlap * 0.5f);
+
+                if (!mapManager.isColliding(x + pushX, z, radius)) x += pushX;
+                if (!mapManager.isColliding(x, z + pushZ, radius)) z += pushZ;
             }
         }
-        return false;
     }
 
 }

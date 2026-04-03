@@ -112,7 +112,8 @@ public class ExtractionGame extends ApplicationAdapter {
         
         // Server Updates
         localPlayer.update(delta);
-        for (EnemyEntity enemy : enemies) {
+        for (int i = 0; i < enemies.size; i++) {
+            EnemyEntity enemy = enemies.get(i);
             enemy.update(delta, localPlayer, mapManager, enemies);
         }
 
@@ -127,7 +128,8 @@ public class ExtractionGame extends ApplicationAdapter {
             shadowBatch.render(block);
         }
         
-        for (EnemyEntity enemy : enemies) {
+        for (int i = 0; i < enemies.size; i++) {
+            EnemyEntity enemy = enemies.get(i);
             enemyBrush.transform.setToTranslation(enemy.x, enemy.y, enemy.z);
             shadowBatch.render(enemyBrush);
         }
@@ -136,13 +138,15 @@ public class ExtractionGame extends ApplicationAdapter {
         shadowLight.end();
 
         ScreenUtils.clear(0.5f, 0.8f, 1f, 1f, true);
+
         modelBatch.begin(camera);
         
         for (ModelInstance block : mapManager.blocks) {
             modelBatch.render(block, environment);
         }
 
-        for (EnemyEntity enemy : enemies) {
+        for (int i = 0; i < enemies.size; i++) {
+            EnemyEntity enemy = enemies.get(i);
             enemyBrush.transform.setToTranslation(enemy.x, enemy.y, enemy.z);
             modelBatch.render(enemyBrush, environment);
         }
