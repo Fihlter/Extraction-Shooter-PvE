@@ -64,6 +64,7 @@ public class ExtractionGame extends ApplicationAdapter {
 
     // Audio state
     private Sound footstepSound;
+    private Sound hitSound;
     private float footstepTimer = 0f;
     private static final float FOOTSTEP_INTERVAL = 0.35f;
 
@@ -87,8 +88,9 @@ public class ExtractionGame extends ApplicationAdapter {
         environment = new Environment();
         environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f, 0.4f, 0.4f, 1f));
         
-        // Setup footsteps
-        footstepSound = Gdx.audio.newSound(Gdx.files.internal("sounds/footstep01.ogg"));
+        // Setup sounds
+        footstepSound = Gdx.audio.newSound(Gdx.files.internal("sounds/footsteps/footstep01.ogg"));
+        hitSound = Gdx.audio.newSound(Gdx.files.internal("sounds/npc/hit01.wav"));
 
         shadowLight = new DirectionalShadowLight(4096, 4096, 45f, 45f, 1f, 300f);
         shadowLight.set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f);
@@ -360,7 +362,8 @@ public class ExtractionGame extends ApplicationAdapter {
 
                     if (dotProduct > 0.5f) {
                         enemy.takeHit(localPlayer.x, localPlayer.z);
-                        // TODO: Play hit sound
+                        // Play hit sound
+                        hitSound.play(1.0f, MathUtils.random(0.9f, 1.1f), 0f);
                     }
                 }
             }
@@ -397,15 +400,31 @@ public class ExtractionGame extends ApplicationAdapter {
         swordInstance.transform.rotate(Vector3.Z, -90f);
     }
 
-    // -- GARBAGE COLLECTION --
-    @Override
-    public void dispose() {
+    // Collect sound garbage
+    private void disposeSounds() {
+        footstepSound.dispose();
+        hitSound.dispose();
+    }
+
+    // Collect model garbage
+    private void disposeModels() {
+        swordModel.dispose();
+        enemyModel.dispose();
+    }
+
+    // Collect world garbage
+    private void disposeWorld() {
         modelBatch.dispose();
         shadowBatch.dispose();
         shadowLight.dispose();
         mapManager.dispose();
-        swordModel.dispose();
-        enemyModel.dispose();
-        footstepSound.dispose();
+    }
+
+    // -- GARBAGE COLLECTION --
+    @Override
+    public void dispose() {
+        disposeWorld();
+        disposeModels();
+        disposeSounds();
     }
 }
