@@ -1,18 +1,28 @@
 package com.nomuse.freecell.game;
 
+import com.badlogic.gdx.graphics.g3d.Model;
+import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 
 public class ParticleEntity {
 
-    public float x, y, z;
+    public ModelInstance instance;
+    public float originX, originY, originZ;
+    public float localX, localY, localZ;
     public float vx, vy, vz;
     public float life, maxLife;
 
-    public ParticleEntity(float startX, float startY, float startZ) {
-        this.x = startX;
-        this.y = startY;
-        this.z = startZ;
+    public ParticleEntity(Model particleModel, float enemyWorldX, float enemyWorldY, float enemyWorldZ) {
+        this.instance = new ModelInstance(particleModel);
+
+        this.originX = enemyWorldX;
+        this.originY = enemyWorldY;
+        this.originZ = enemyWorldZ;
+
+        this.localX = 0f;
+        this.localY = 0f;
+        this.localZ = 0f;
 
         Vector3 randomDir = new Vector3().setToRandomDirection();
         float speed = MathUtils.random(4f, 10f);
@@ -34,19 +44,28 @@ public class ParticleEntity {
         vx -= vx * 1.5f * deltaTime;
         vz -= vz * 1.5f * deltaTime;
 
-        x += vy * deltaTime;
-        y += vy * deltaTime;
-        z += vz * deltaTime;
+        localX += vy * deltaTime;
+        localY += vy * deltaTime;
+        localZ += vz * deltaTime;
+
+        float worldY = originY + localY;
 
         // Floor collision
-        if (y < 1.1f) {
-            y = 1.1f;
+        if (worldY < 1.1f) {
+            localY = 1.1f - originY;
             vy = -vy * 0.4f;
             vx *= 0.8f;
             vz *= 0.8f;
         }
 
         life -= deltaTime;
+
+        float renderX = originX + localX;
+        float renderY = originY + localY;
+        float renderZ = originZ + localZ;
+
+        float scale = (life / maxLife) * 0.2f;
+        instance.transform.setToTranslation(renderX, renderY, renderZ).scale(scale, scale, scale);
         return life <= 0;
     }
 

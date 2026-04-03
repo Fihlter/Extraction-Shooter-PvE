@@ -66,7 +66,7 @@ public class ExtractionGame extends ApplicationAdapter {
     // Enemy vars
     private Array<EnemyEntity> enemies;
     private Array<ParticleEntity> particles = new Array<>();
-    private ModelInstance particleBrush;
+    private Model particleModel;
     private Model enemyModel;
     private ModelInstance enemyBrush;
 
@@ -108,12 +108,6 @@ public class ExtractionGame extends ApplicationAdapter {
         hitSound = Gdx.audio.newSound(Gdx.files.internal("sounds/npc/hit02.wav"));
         deathSound = Gdx.audio.newSound(Gdx.files.internal("sounds/npc/npc_death.wav"));
 
-        // NPC death particle model
-        Model particleModel = modelBuilder.createBox(0.2f, 0.2f, 0.2f,
-            new Material(ColorAttribute.createDiffuse(Color.FIREBRICK)),
-            VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
-        particleBrush = new ModelInstance(particleModel);
-
         shadowLight = new DirectionalShadowLight(4096, 4096, 45f, 45f, 1f, 300f);
         shadowLight.set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f);
 
@@ -131,6 +125,11 @@ public class ExtractionGame extends ApplicationAdapter {
                 new Material(ColorAttribute.createDiffuse(Color.FIREBRICK)),
                 VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
         enemyBrush = new ModelInstance(enemyModel);
+
+        // Initialize particle model
+        particleModel = modelBuilder.createBox(1f, 1f, 1f,
+            new Material(ColorAttribute.createDiffuse(Color.FIREBRICK)),
+            VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
 
         ObjLoader loader = new ObjLoader();
         swordModel = loader.loadModel(Gdx.files.internal("sword/kamasword.obj"));
@@ -182,7 +181,7 @@ public class ExtractionGame extends ApplicationAdapter {
                 if (deathSound != null) deathSound.play(1.0f, MathUtils.random(0.85f, 1.15f), 0f);
 
                 for (int p = 0; p < 50; p++) {
-                    particles.add(new ParticleEntity(enemy.x, enemy.y + 0.5f, enemy.z));
+                    particles.add(new ParticleEntity(particleModel, enemy.x, enemy.y + 0.5f, enemy.z));
                 }
 
                 enemies.removeIndex(i);
@@ -237,13 +236,7 @@ public class ExtractionGame extends ApplicationAdapter {
         
         // Draw particles
         for (int i = 0; i < particles.size; i++) {
-            ParticleEntity p = particles.get(i);
-            float scale = p.life / p.maxLife;
-            particleBrush.transform.setToTranslation(p.x, p.y, p.z).scale(scale, scale, scale);
-
-            modelBatch.render(particleBrush, environment);
-
-            modelBatch.flush();
+            modelBatch.render(particles.get(i).instance, environment);
         }
 
         // Draw sword
@@ -465,6 +458,7 @@ public class ExtractionGame extends ApplicationAdapter {
     private void disposeModels() {
         if (swordModel != null) swordModel.dispose();
         if (enemyModel != null) enemyModel.dispose();
+        if (particleModel != null) particleModel.dispose();
     }
 
     // Collect world garbage
