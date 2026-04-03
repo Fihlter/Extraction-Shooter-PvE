@@ -108,7 +108,7 @@ public class ExtractionGame extends ApplicationAdapter {
         // Humanoid models
         // Torso
         Model torsoModel = modelBuilder.createBox(0.4f, 0.6f, 0.4f,
-            new Material(ColorAttribute.createDiffuse(Color.FIREBRICK)),
+            new Material(ColorAttribute.createDiffuse(Color.DARK_GRAY)),
             VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
         // Head
         Model headModel = modelBuilder.createBox(0.4f, 0.4f, 0.4f,
@@ -116,7 +116,7 @@ public class ExtractionGame extends ApplicationAdapter {
             VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
         // Limb
         Model limbModel = modelBuilder.createBox(0.2f, 0.6f, 0.2f,
-            new Material(ColorAttribute.createDiffuse(Color.BROWN)),
+            new Material(ColorAttribute.createDiffuse(Color.FIREBRICK)),
             VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
         
         // Create instances
