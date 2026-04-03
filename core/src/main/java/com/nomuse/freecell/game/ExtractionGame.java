@@ -11,6 +11,11 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Vector3;
 
+// ./gradlew :lwjgl3:run
+// git add .
+// git commit -m "changes"
+// git push
+
 public class ExtractionGame extends ApplicationAdapter {
 
     private OrthographicCamera camera;
@@ -21,6 +26,11 @@ public class ExtractionGame extends ApplicationAdapter {
     private float playerY = 400;
     private float playerSpeed = 200f;
     private float playerAngle = 0f;
+
+    // Melee combat vars
+    private boolean isAttacking = false;
+    private float attackTimer = 0f;
+    private final float ATTACK_DURATION = 0.15f;
 
     @Override
     public void create() {
@@ -55,6 +65,22 @@ public class ExtractionGame extends ApplicationAdapter {
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         shapeRenderer.setColor(Color.BLUE);
         shapeRenderer.triangle(15, 0, -12, -12, -12, 12);
+
+        // Draw melee slash
+        if (isAttacking) {
+            attackTimer += Gdx.graphics.getDeltaTime();
+
+            float progress = MathUtils.clamp(attackTimer / ATTACK_DURATION, 0f, 1f);
+
+            shapeRenderer.setColor(Color.WHITE);
+            float currentSweep = 120f * progress;
+            shapeRenderer.arc(20, 0, 30, -60, currentSweep);
+
+            if (attackTimer >= ATTACK_DURATION) {
+                isAttacking = false;
+            }
+        }
+
         shapeRenderer.end();
 
         shapeRenderer.setTransformMatrix(oldTransform);
@@ -69,9 +95,13 @@ public class ExtractionGame extends ApplicationAdapter {
         if (Gdx.input.isKeyPressed(Input.Keys.A)) playerX -= playerSpeed * deltaTime;
         if (Gdx.input.isKeyPressed(Input.Keys.D)) playerX += playerSpeed * deltaTime;
 
+        if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) && !isAttacking) {
+            isAttacking = true;
+            attackTimer = 0f;
+        }
+
         // Mouse aiming input
         Vector3 mousePos = new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0);
-
         camera.unproject(mousePos);
 
         float dx = mousePos.x - playerX;
