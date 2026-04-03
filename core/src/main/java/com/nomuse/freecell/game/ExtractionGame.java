@@ -23,11 +23,13 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.BoundingBox;
 import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.math.Matrix4;
 
 public class ExtractionGame extends ApplicationAdapter {
 
     private final Vector3 tmpForward = new Vector3();
     private final Vector3 tmpRight = new Vector3();
+    private final Matrix4 tmpMatrix = new Matrix4();
     
     private PerspectiveCamera camera;
     private ModelBatch modelBatch;
@@ -228,10 +230,13 @@ public class ExtractionGame extends ApplicationAdapter {
             flashAmount = MathUtils.sin((enemy.damageTimer / EnemyEntity.DAMAGE_DURATION) * MathUtils.PI);
         }
 
+        // Move enemy's world position
+        tmpMatrix.idt().translate(ex, ey, ez).rotate(Vector3.Y, enemy.rotation);
+
         // Torso
         workingColor.set(baseTorsoColor).lerp(hitColor, flashAmount);
         ((ColorAttribute)torsoBrush.materials.get(0).get(ColorAttribute.Diffuse)).color.set(workingColor);
-        torsoBrush.transform.setToTranslation(ex, ey, ez);
+        torsoBrush.transform.set(tmpMatrix);
         if (env == null) {
             batch.render(torsoBrush);
         } else {
@@ -241,7 +246,7 @@ public class ExtractionGame extends ApplicationAdapter {
         // Head
         workingColor.set(baseHeadColor).lerp(hitColor, flashAmount);
         ((ColorAttribute)headBrush.materials.get(0).get(ColorAttribute.Diffuse)).color.set(workingColor);
-        headBrush.transform.setToTranslation(ex, ey + 0.5f, ez);
+        headBrush.transform.set(tmpMatrix).translate(0, 0.5f, 0);
         if (env == null) {
             batch.render(headBrush);
         } else {
@@ -251,13 +256,13 @@ public class ExtractionGame extends ApplicationAdapter {
         // Legs
         workingColor.set(baseLimbColor).lerp(hitColor, flashAmount);
         ((ColorAttribute)limbBrush.materials.get(0).get(ColorAttribute.Diffuse)).color.set(workingColor);
-        limbBrush.transform.setToTranslation(ex - 0.1f, ey - 0.6f, ez);
+        limbBrush.transform.set(tmpMatrix).translate(-0.1f, -0.6f, 0);
         if (env == null) {
             batch.render(limbBrush);
         } else {
             batch.render(limbBrush, env);
         }
-        limbBrush.transform.setToTranslation(ex + 0.1f, ey - 0.6f, ez);
+        limbBrush.transform.set(tmpMatrix).translate(-0.1f, 0.6f, 0);
         if (env == null) {
             batch.render(limbBrush);
         } else {
@@ -265,13 +270,13 @@ public class ExtractionGame extends ApplicationAdapter {
         }
 
         // Arms
-        limbBrush.transform.setToTranslation(ex - 0.3f, ey, ez);
+        limbBrush.transform.set(tmpMatrix).translate(-0.3f, 0, 0);
         if (env == null) {
             batch.render(limbBrush);
         } else {
             batch.render(limbBrush, env);
         }
-        limbBrush.transform.setToTranslation(ex + 0.3f, ey, ez);
+        limbBrush.transform.set(tmpMatrix).translate(-0.3f, 0, 0);
         if (env == null) {
             batch.render(limbBrush);
         } else {

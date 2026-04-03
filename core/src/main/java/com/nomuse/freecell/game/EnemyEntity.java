@@ -1,6 +1,7 @@
 package com.nomuse.freecell.game;
 
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Array;
 
 public class EnemyEntity {
@@ -9,6 +10,11 @@ public class EnemyEntity {
     public float x, y, z;
     public float radius = 0.5f;
     public float speed = 4f;
+
+    // Rotation and pathfinding
+    public float rotation = 0f;
+    private Array<Vector2> currentPath = new Array<>();
+    private float pathTimer = 0f;
 
     // Physics
     public float yVelocity = 0f;
@@ -71,9 +77,7 @@ public class EnemyEntity {
         // Scan all players to find closest
         for (int i = 0; i < players.size; i++) {
             PlayerEntity p = players.get(i);
-            float pDx = p.x - x;
-            float pDz = p.z - z;
-            float distSq = (pDx * pDx) + (pDz * pDz);
+            float distSq = (p.x * p.x) + (p.z * p.z);
 
             if (distSq < closestDistSq) {
                 closestDistSq = distSq;
@@ -86,24 +90,49 @@ public class EnemyEntity {
         float moveZ = 0;
 
         if (closestPlayer != null) {
-            float distance = (float) Math.sqrt(closestDistSq);
-            float dx = closestPlayer.x - x;
-            float dz = closestPlayer.z - z;
+            float distanceToPlayer = (float) Math.sqrt(closestDistSq);
 
-            if (distance < aggroRange && distance > 1.2f) {
-                moveX = (dx / distance) * speed;
-                moveZ = (dz / distance) * speed;
+            if (distanceToPlayer < aggroRange && distanceToPlayer > 1.2f) {
+                boolean hasLOS = mapManager.hasLineOfSight(x, z, closestPlayer.x, closestPlayer.z);
+
+                if (hasLOS) {
+                    // Walk to player
+                    float dx = closestPlayer.x - x;
+                    float dz = closestPlayer.z - z;
+                    moveX = (dx / distanceToPlayer * speed);
+                    moveZ = (dz / distanceToPlayer * speed);
+                } else {
+                    // Update path 2x/sec
+                    pathTimer += deltaTime;
+                    if (pathTimer > 0.5f) {
+                        pathTimer = 0f;
+                        currentPath = mapManager.findPath(x, z, closestPlayer.x, closestPlayer.z);
+                    }
+
+                    // Follow path nodes
+                    if (currentPath.size > 0) {
+                        Vector2 nextNode = currentPath.first();
+                        float nx = nextNode.x - x;
+                        float nz = nextNode.y - z;
+                        float distToNode = (float)Math.sqrt(nx*nx + nz*nz);
+
+                        if (distToNode < 0.3f) {
+                            currentPath.removeIndex(0);
+                        } else {
+                            moveX = (nx / distToNode) * speed;
+                            moveZ = (nz / distToNode) * speed;
+                        }
+                    }
+                }
 
                 // Separation force
                 for (int i = 0; i < allEnemies.size; i++) {
                     EnemyEntity other = allEnemies.get(i);
                     if (other == this) continue;
-
                     float diffX = x - other.x;
                     float diffZ = z - other.z;
                     float distSq = diffX * diffX + diffZ * diffZ;
                     float personalSpace = 1.1f;
-
                     if (distSq < personalSpace * personalSpace && distSq > 0) {
                         float d = (float)Math.sqrt(distSq);
                         float force = (personalSpace - d) / personalSpace;
@@ -111,16 +140,15 @@ public class EnemyEntity {
                         moveZ += (diffZ / d) * force * speed;
                     }
                 }
-                
             }
-
-            /*if (!mapManager.isColliding(x + moveX, z, radius)) {
-                x += moveX;
-            }
-            if (!mapManager.isColliding(x, z + moveZ, radius)) {
-                z += moveZ;
-            }*/
         }
+
+        // Smooth rotation
+        if (moveX != 0 || moveZ != 0) {
+            float targetAngle = MathUtils.radiansToDegrees * MathUtils.atan2(moveX, moveZ);
+            rotation = MathUtils.lerpAngleDeg(rotation, targetAngle, deltaTime * 10f);
+        }
+
         // Apply knockback physics
         moveX += knockbackX;
         moveZ += knockbackZ;
