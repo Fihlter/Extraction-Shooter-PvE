@@ -39,6 +39,7 @@ public class ExtractionGame extends ApplicationAdapter {
 
     // Network player state
     private PlayerEntity localPlayer;
+    private Array<PlayerEntity> players;
     private float moveSpeed = 8f;
     private float mouseSensitivity = 0.2f;
 
@@ -77,6 +78,9 @@ public class ExtractionGame extends ApplicationAdapter {
         mapManager = new MapManager();
 
         localPlayer = new PlayerEntity(1);
+
+        players = new Array<>();
+        players.add(localPlayer);
 
         camera = new PerspectiveCamera(90, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         camera.near = 0.1f;
@@ -160,7 +164,7 @@ public class ExtractionGame extends ApplicationAdapter {
 
         for (int i = 0; i < enemies.size; i++) {
             EnemyEntity enemy = enemies.get(i);
-            enemy.update(delta, localPlayer, mapManager, enemies);
+            enemy.update(delta, players, mapManager, enemies);
         }
 
         // Update Camera
@@ -273,6 +277,8 @@ public class ExtractionGame extends ApplicationAdapter {
         } else {
             batch.render(limbBrush, env);
         }
+
+        batch.flush();
     }
 
     // -- INPUT HANDLING --

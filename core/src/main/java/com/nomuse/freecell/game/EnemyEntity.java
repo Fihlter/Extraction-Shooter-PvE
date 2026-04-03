@@ -44,7 +44,7 @@ public class EnemyEntity {
     }
 
     // Server-side Sim Logic
-    public void update(float deltaTime, PlayerEntity targetPlayer, MapManager mapManager, Array<EnemyEntity> allEnemies) {
+    public void update(float deltaTime, Array<PlayerEntity> players, MapManager mapManager, Array<EnemyEntity> allEnemies) {
 
         if (damageTimer > 0) {
             damageTimer -= deltaTime;
@@ -65,34 +65,53 @@ public class EnemyEntity {
             isGrounded = false;
         }
 
-        // Movement AI
-        float dx = targetPlayer.x - x;
-        float dz = targetPlayer.z - z;
-        float distance = (float) Math.sqrt(dx * dx + dz * dz);
+        PlayerEntity closestPlayer = null;
+        float closestDistSq = Float.MAX_VALUE;
 
+        // Scan all players to find closest
+        for (int i = 0; i < players.size; i++) {
+            PlayerEntity p = players.get(i);
+            float pDx = p.x - x;
+            float pDz = p.z - z;
+            float distSq = (pDx * pDx) + (pDz * pDz);
+
+            if (distSq < closestDistSq) {
+                closestDistSq = distSq;
+                closestPlayer = p;
+            }
+        }
+
+        // Movement AI
         float moveX = 0;
         float moveZ = 0;
 
-        if (distance < aggroRange && distance > 1.2f) {
-            moveX = (dx / distance) * speed;
-            moveZ = (dz / distance) * speed;
+        if (closestPlayer != null) {
+            float distance = (float) Math.sqrt(closestDistSq);
+            float dx = closestPlayer.x - x;
+            float dz = closestPlayer.z - z;
 
-            // Separation Force
-            for (int i = 0; i < allEnemies.size; i++) {
-                EnemyEntity other = allEnemies.get(i);
-                if (other == this) continue;
+            if (distance < aggroRange && distance > 1.2f) {
+                moveX = (dx / distance) * speed;
+                moveZ = (dz / distance) * speed;
 
-                float diffX = x - other.x;
-                float diffZ = z - other.z;
-                float distSq = diffX * diffX + diffZ * diffZ;
-                float personalSpace = 1.1f;
+                // Separation force
+                for (int i = 0; i < allEnemies.size; i++) {
+                    EnemyEntity other = allEnemies.get(i);
+                    if (other == this) continue;
 
-                if (distSq < personalSpace * personalSpace && distSq > 0) {
-                    float d = (float)Math.sqrt(distSq);
-                    float force = (personalSpace - d) / personalSpace;
-                    moveX += (diffX / d) * force * speed;
-                    moveZ += (diffZ / d) * force * speed;
+                    float diffX = x - other.x;
+                    float diffZ = z - other.z;
+                    float distSq = diffX * diffX + diffZ * diffZ;
+                    float personalSpace = 1.1f;
+
+                    if (distSq < personalSpace * personalSpace && distSq > 0) {
+                        float d = (float)Math.sqrt(distSq);
+                        float force = (personalSpace - d) / personalSpace;
+                        moveX += (diffX / d) * force * speed;
+                        moveZ += (diffZ / d) * force * speed;
+                    }
                 }
+                
             }
 
             /*if (!mapManager.isColliding(x + moveX, z, radius)) {
