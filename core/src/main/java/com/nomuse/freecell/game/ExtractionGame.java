@@ -291,14 +291,17 @@ public class ExtractionGame extends ApplicationAdapter {
         }
 
         // Footstep logic
-        boolean isMoving = (dx != 0 || dz != 0);
+        boolean isMoving =  Gdx.input.isKeyPressed(Input.Keys.W) ||
+                            Gdx.input.isKeyPressed(Input.Keys.S) ||
+                            Gdx.input.isKeyPressed(Input.Keys.A) ||
+                            Gdx.input.isKeyPressed(Input.Keys.D);
 
         if (isMoving && localPlayer.isGrounded) {
             if (footstepTimer >= FOOTSTEP_INTERVAL) {
                 footstepSound.play(1.0f, MathUtils.random(0.85f, 1.15f), 0f);
                 footstepTimer = 0f;
             }
-            footstepTimer = 0f;
+            footstepTimer += deltaTime;
         } else if (!isMoving && localPlayer.isGrounded) {
             footstepTimer = FOOTSTEP_INTERVAL;
         }
