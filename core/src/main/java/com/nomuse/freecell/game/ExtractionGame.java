@@ -13,6 +13,7 @@ import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
+import com.badlogic.gdx.graphics.g3d.loader.ObjLoader;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.math.MathUtils;
@@ -33,6 +34,8 @@ public class ExtractionGame extends ApplicationAdapter {
     // Melee weapon visuals
     private Model swordModel;
     private ModelInstance swordInstance;
+
+    private float swordScale = 0.0025f;
 
     @Override
     public void create() {
@@ -59,9 +62,8 @@ public class ExtractionGame extends ApplicationAdapter {
         mapManager = new MapManager(modelBuilder);
 
         // Create melee weapon
-        swordModel = modelBuilder.createBox(0.2f, 1.5f, 0.2f,
-            new Material(ColorAttribute.createDiffuse(Color.LIGHT_GRAY)),
-            VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
+        ObjLoader loader = new ObjLoader();
+        swordModel = loader.loadModel(Gdx.files.internal("sword/kamasword.obj"));
         swordInstance = new ModelInstance(swordModel);
     }
 
@@ -156,6 +158,10 @@ public class ExtractionGame extends ApplicationAdapter {
 
         //swordInstance.transform.rotate(Vector3.X, 15f);
         //swordInstance.transform.rotate(Vector3.Z, 15f);
+
+        swordInstance.transform.scale(swordScale, swordScale, swordScale);
+        swordInstance.transform.rotate(Vector3.Y, 90f);
+        swordInstance.transform.rotate(Vector3.Z, -90f);
 
         // Animate sword swing
         if (localPlayer.isAttacking) {
