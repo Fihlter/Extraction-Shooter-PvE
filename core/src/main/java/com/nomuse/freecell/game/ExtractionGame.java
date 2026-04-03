@@ -46,6 +46,14 @@ public class ExtractionGame extends ApplicationAdapter {
     private ModelInstance headBrush;
     private ModelInstance limbBrush;
 
+    // Pre-allocate colors
+    private final Color baseTorsoColor = new Color(Color.FIREBRICK);
+    private final Color baseHeadColor = new Color(Color.MAROON);
+    private final Color baseLimbColor = new Color(Color.BROWN);
+    private final Color hitColor = new Color(Color.RED);
+    private final Color workingColor = new Color();
+
+    // Sword vars
     private float swordScale = 0.0025f;
     private float hiltOffsetY = 0f;
 
@@ -135,6 +143,7 @@ public class ExtractionGame extends ApplicationAdapter {
         limbBrush = new ModelInstance(limbModel);
     }
 
+    // -- HANDLE RENDERING --
     @Override
     public void render() {
         float delta = Gdx.graphics.getDeltaTime();
@@ -197,12 +206,21 @@ public class ExtractionGame extends ApplicationAdapter {
         }
     }
 
+    // -- RENDER HUMANOID ENEMY --
     private void renderHumanoid(EnemyEntity enemy, ModelBatch batch, Environment env) {
         float ex = enemy.x;
         float ey = enemy.y;
         float ez = enemy.z;
 
+        // Calculate damage glow
+        float flashAmount = 0f;
+        if (enemy.damageTimer > 0) {
+            flashAmount = MathUtils.sin((enemy.damageTimer / EnemyEntity.DAMAGE_DURATION) * MathUtils.PI);
+        }
+
         // Torso
+        workingColor.set(baseTorsoColor).lerp(hitColor, flashAmount);
+        ((ColorAttribute)torsoBrush.materials.get(0).get(ColorAttribute.Diffuse)).color.set(workingColor);
         torsoBrush.transform.setToTranslation(ex, ey, ez);
         if (env == null) {
             batch.render(torsoBrush);
@@ -211,6 +229,8 @@ public class ExtractionGame extends ApplicationAdapter {
         }
 
         // Head
+        workingColor.set(baseHeadColor).lerp(hitColor, flashAmount);
+        ((ColorAttribute)headBrush.materials.get(0).get(ColorAttribute.Diffuse)).color.set(workingColor);
         headBrush.transform.setToTranslation(ex, ey + 0.5f, ez);
         if (env == null) {
             batch.render(headBrush);
@@ -219,6 +239,8 @@ public class ExtractionGame extends ApplicationAdapter {
         }
 
         // Legs
+        workingColor.set(baseLimbColor).lerp(hitColor, flashAmount);
+        ((ColorAttribute)limbBrush.materials.get(0).get(ColorAttribute.Diffuse)).color.set(workingColor);
         limbBrush.transform.setToTranslation(ex - 0.1f, ey - 0.6f, ez);
         if (env == null) {
             batch.render(limbBrush);
@@ -247,6 +269,7 @@ public class ExtractionGame extends ApplicationAdapter {
         }
     }
 
+    // -- INPUT HANDLING --
     private void handleInput(float deltaTime) {
         if (!Gdx.input.isCursorCatched()) return;
 
@@ -316,9 +339,35 @@ public class ExtractionGame extends ApplicationAdapter {
         if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) && !localPlayer.isAttacking) {
             localPlayer.isAttacking = true;
             localPlayer.attackTimer = 0f;
+
+            // Hit detection cone
+            float hitRange = 2.0f;
+            float lookX = -forward.x;
+            float lookZ = -forward.z;
+
+            for (int i = 0; i < enemies.size; i++) {
+                EnemyEntity enemy = enemies.get(i);
+
+                float eDx = enemy.x - localPlayer.x;
+                float eDz = enemy.z - localPlayer.z;
+                float dist = (float) Math.sqrt(eDx * eDx + eDz * eDz);
+
+                if (dist < hitRange) {
+                    float dirX = eDx / dist;
+                    float dirZ = eDz / dist;
+
+                    float dotProduct = (lookX * dirX) + (lookZ * dirZ);
+
+                    if (dotProduct > 0.5f) {
+                        enemy.takeHit(localPlayer.x, localPlayer.z);
+                        // TODO: Play hit sound
+                    }
+                }
+            }
         }
     }
 
+    // -- UPDATING WEAPON/CAMERA --
     private void updateCameraAndWeapon() {
         camera.position.set(localPlayer.x, localPlayer.y, localPlayer.z);
         camera.direction.set(0, 0, -1);
@@ -348,6 +397,7 @@ public class ExtractionGame extends ApplicationAdapter {
         swordInstance.transform.rotate(Vector3.Z, -90f);
     }
 
+    // -- GARBAGE COLLECTION --
     @Override
     public void dispose() {
         modelBatch.dispose();
