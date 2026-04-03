@@ -17,7 +17,7 @@ public class ParticleEntity {
         this.instance = new ModelInstance(particleModel);
 
         this.originX = enemyWorldX;
-        this.originY = enemyWorldY;
+        this.originY = enemyWorldY - 0.8f;
         this.originZ = enemyWorldZ;
 
         this.localX = 0f;
@@ -25,15 +25,15 @@ public class ParticleEntity {
         this.localZ = 0f;
 
         Vector3 randomDir = new Vector3().setToRandomDirection();
-        float speed = MathUtils.random(4f, 10f);
+        float speed = MathUtils.random(4f, 5f);
 
         // Explode outward in random dir
         this.vx = randomDir.x * speed;
-        this.vy = randomDir.z * speed;
-        this.vz = Math.abs(randomDir.y * speed) + 3f;
+        this.vy = Math.abs(randomDir.y * speed) + 3f; 
+        this.vz = randomDir.z * speed;
 
         // Random lifetime
-        this.maxLife = MathUtils.random(0.5f, 1.5f);
+        this.maxLife = MathUtils.random(0.5f, 1.0f);
         this.life = this.maxLife;
     }
 
@@ -44,7 +44,7 @@ public class ParticleEntity {
         vx -= vx * 1.5f * deltaTime;
         vz -= vz * 1.5f * deltaTime;
 
-        localX += vy * deltaTime;
+        localX += vx * deltaTime; 
         localY += vy * deltaTime;
         localZ += vz * deltaTime;
 

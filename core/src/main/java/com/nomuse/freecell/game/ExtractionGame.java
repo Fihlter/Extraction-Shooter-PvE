@@ -384,6 +384,17 @@ public class ExtractionGame extends ApplicationAdapter {
             localPlayer.isGrounded = false;
         }
 
+        // Spawn Enemy
+        if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+            float spawnX = localPlayer.x - (tmpForward.x * 3f);
+            float spawnZ = localPlayer.z - (tmpForward.z * 3f);
+            float spawnY = 3f;
+
+            int randomId = MathUtils.random(1000, 9999);
+
+            enemies.add(new EnemyEntity(randomId, spawnX, spawnY, spawnZ));
+        }
+
         // Melee attack
         if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) && !localPlayer.isAttacking) {
             localPlayer.isAttacking = true;
