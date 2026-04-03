@@ -11,6 +11,13 @@ public class PlayerEntity {
     public float attackTimer = 0f;
     public static final float ATTACK_DURATION = 0.3f;
 
+    public float yVelocity = 0f;
+    public boolean isGrounded = true;
+
+    public static final float GRAVITY = -25f;
+    public static final float JUMP_FORCE = 9f;
+    public static final float BASE_EYE_HEIGHT = 2f;
+
     public PlayerEntity(int id) {
         this.id = id;
     }
@@ -22,6 +29,20 @@ public class PlayerEntity {
                 isAttacking = false;
                 attackTimer = 0f;
             }
+        }
+
+        if (!isGrounded) {
+            yVelocity += GRAVITY * deltaTime;
+        }
+
+        y += yVelocity * deltaTime;
+
+        if (y <= BASE_EYE_HEIGHT) {
+            y = BASE_EYE_HEIGHT;
+            yVelocity = 0f;
+            isGrounded = true;
+        } else {
+            isGrounded = false;
         }
     }
 

@@ -5,7 +5,6 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.VertexAttributes;
 import com.badlogic.gdx.graphics.g3d.Environment;
 import com.badlogic.gdx.graphics.g3d.Material;
@@ -14,11 +13,11 @@ import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.FloatAttribute;
-import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalShadowLight;
 import com.badlogic.gdx.graphics.g3d.loader.ObjLoader;
 import com.badlogic.gdx.graphics.g3d.utils.DepthShaderProvider;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
+import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
@@ -46,27 +45,27 @@ public class ExtractionGame extends ApplicationAdapter {
     private float swordScale = 0.0025f;
     private float hiltOffsetY = 0f;
 
+    // Enemy vars
+    private Array<EnemyEntity> enemies;
+    private Model enemyModel;
+    private ModelInstance enemyBrush;
+
     @Override
     public void create() {
 
-        // Setup local player state
         localPlayer = new PlayerEntity(1);
 
-        // Setup 3D Camera (FOV: 90)
         camera = new PerspectiveCamera(90, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         camera.near = 0.1f;
         camera.far = 300f;
 
         Gdx.input.setCursorCatched(true);
 
-        // Setup 3D renderer and model builder
         modelBatch = new ModelBatch();
-
         shadowBatch = new ModelBatch(new DepthShaderProvider());
 
         ModelBuilder modelBuilder = new ModelBuilder();
 
-        // Setup lighting
         environment = new Environment();
         environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f, 0.4f, 0.4f, 1f));
         
@@ -78,7 +77,18 @@ public class ExtractionGame extends ApplicationAdapter {
 
         mapManager = new MapManager(modelBuilder);
 
-        // Create melee weapon
+        // --- SPAWN ENEMIES ---
+        enemies = new Array<>();
+        // Spawn two enemies nearby
+        enemies.add(new EnemyEntity(101, 4f, 3f, 4f));
+        enemies.add(new EnemyEntity(102, -4f, 3f, 8f));
+
+        // Create a 1x1x1 Red Cube to represent enemies
+        enemyModel = modelBuilder.createBox(1f, 1f, 1f,
+                new Material(ColorAttribute.createDiffuse(Color.FIREBRICK)),
+                VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
+        enemyBrush = new ModelInstance(enemyModel);
+
         ObjLoader loader = new ObjLoader();
         swordModel = loader.loadModel(Gdx.files.internal("sword/kamasword.obj"));
         swordInstance = new ModelInstance(swordModel);
@@ -97,35 +107,49 @@ public class ExtractionGame extends ApplicationAdapter {
     public void render() {
         float delta = Gdx.graphics.getDeltaTime();
 
+        // Process Input
         handleInput(delta);
+        
+        // Server Updates
         localPlayer.update(delta);
+        for (EnemyEntity enemy : enemies) {
+            enemy.update(delta, localPlayer, mapManager, enemies);
+        }
+
+        // Update Camera
         updateCameraAndWeapon();
 
+        // Shadows
         shadowLight.begin(camera.position, camera.direction);
         shadowBatch.begin(shadowLight.getCamera());
 
         for (ModelInstance block : mapManager.blocks) {
             shadowBatch.render(block);
         }
+        
+        for (EnemyEntity enemy : enemies) {
+            enemyBrush.transform.setToTranslation(enemy.x, enemy.y, enemy.z);
+            shadowBatch.render(enemyBrush);
+        }
 
         shadowBatch.end();
         shadowLight.end();
 
-        // Clear screen to sky blue
         ScreenUtils.clear(0.5f, 0.8f, 1f, 1f, true);
-
-        // Render all 3D objects
         modelBatch.begin(camera);
+        
         for (ModelInstance block : mapManager.blocks) {
             modelBatch.render(block, environment);
         }
 
-        // Render weapon
-        modelBatch.render(swordInstance, environment);
+        for (EnemyEntity enemy : enemies) {
+            enemyBrush.transform.setToTranslation(enemy.x, enemy.y, enemy.z);
+            modelBatch.render(enemyBrush, environment);
+        }
 
+        modelBatch.render(swordInstance, environment);
         modelBatch.end();
 
-        // Press ESC to release mouse cursor
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             Gdx.input.setCursorCatched(!Gdx.input.isCursorCatched());
         }
@@ -134,17 +158,13 @@ public class ExtractionGame extends ApplicationAdapter {
     private void handleInput(float deltaTime) {
         if (!Gdx.input.isCursorCatched()) return;
 
-        // Mouse look
         float deltaX = -Gdx.input.getDeltaX() * mouseSensitivity;
         float deltaY = -Gdx.input.getDeltaY() * mouseSensitivity;
 
         localPlayer.yaw += deltaX;
         localPlayer.pitch += deltaY;
-
-        // Clamp pitch 
         localPlayer.pitch = MathUtils.clamp(localPlayer.pitch, -89f, 89f);
 
-        // WASD Movement
         Vector3 forward = new Vector3((float)Math.sin(Math.toRadians(localPlayer.yaw)), 0, (float)Math.cos(Math.toRadians(localPlayer.yaw))).nor();
         Vector3 right = new Vector3(forward).crs(Vector3.Y).nor();
 
@@ -152,20 +172,20 @@ public class ExtractionGame extends ApplicationAdapter {
         float dz = 0;
 
         if (Gdx.input.isKeyPressed(Input.Keys.W)) {
-            localPlayer.x -= forward.x * moveSpeed * deltaTime;
-            localPlayer.z -= forward.z * moveSpeed * deltaTime;
+            dx -= forward.x * moveSpeed * deltaTime;
+            dz -= forward.z * moveSpeed * deltaTime;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.S)) {
-            localPlayer.x += forward.x * moveSpeed * deltaTime;
-            localPlayer.z += forward.z * moveSpeed * deltaTime;
+            dx += forward.x * moveSpeed * deltaTime;
+            dz += forward.z * moveSpeed * deltaTime;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.A)) {
-            localPlayer.x += right.x * moveSpeed * deltaTime;
-            localPlayer.z += right.z * moveSpeed * deltaTime;
+            dx += right.x * moveSpeed * deltaTime;
+            dz += right.z * moveSpeed * deltaTime;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.D)) {
-            localPlayer.x -= right.x * moveSpeed * deltaTime;
-            localPlayer.z -= right.z * moveSpeed * deltaTime;
+            dx -= right.x * moveSpeed * deltaTime;
+            dz -= right.z * moveSpeed * deltaTime;
         }
 
         float playerRadius = 0.4f;
@@ -177,6 +197,12 @@ public class ExtractionGame extends ApplicationAdapter {
         if (!mapManager.isColliding(localPlayer.x, localPlayer.z + dz, playerRadius)) {
             localPlayer.z += dz;
         }
+        
+        // Jumping
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) && localPlayer.isGrounded) {
+            localPlayer.yVelocity = PlayerEntity.JUMP_FORCE;
+            localPlayer.isGrounded = false;
+        }
 
         // Melee attack
         if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) && !localPlayer.isAttacking) {
@@ -186,7 +212,6 @@ public class ExtractionGame extends ApplicationAdapter {
     }
 
     private void updateCameraAndWeapon() {
-        // Apply player state to camera
         camera.position.set(localPlayer.x, localPlayer.y, localPlayer.z);
         camera.direction.set(0, 0, -1);
         camera.up.set(Vector3.Y);
@@ -194,7 +219,6 @@ public class ExtractionGame extends ApplicationAdapter {
         camera.direction.rotate(Vector3.Y, localPlayer.yaw);
         camera.update();
 
-        // Position sword relative to camera
         swordInstance.transform.setToTranslation(camera.position);
         swordInstance.transform.rotate(Vector3.Y, localPlayer.yaw);
         swordInstance.transform.rotate(Vector3.X, localPlayer.pitch);
@@ -209,13 +233,9 @@ public class ExtractionGame extends ApplicationAdapter {
         }
 
         swordInstance.transform.scale(swordScale, swordScale, swordScale);
-
         swordInstance.transform.translate(0, hiltOffsetY, 0);
 
-        // Offset sword
         swordInstance.transform.translate(0.75f, -0.15f, -0.8f);
-
-        
         swordInstance.transform.rotate(Vector3.Y, 90f);
         swordInstance.transform.rotate(Vector3.Z, -90f);
     }
@@ -227,6 +247,6 @@ public class ExtractionGame extends ApplicationAdapter {
         shadowLight.dispose();
         mapManager.dispose();
         swordModel.dispose();
+        enemyModel.dispose();
     }
-
 }
