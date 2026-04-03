@@ -1,6 +1,7 @@
 package com.nomuse.freecell.game;
 
 import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.math.Vector2;
 
 public class EnemyEntity {
 
@@ -42,47 +43,34 @@ public class EnemyEntity {
 
         float dx = targetPlayer.x - x;
         float dz = targetPlayer.z - z;
-
         float distance = (float) Math.sqrt(dx * dx + dz * dz);
 
         if (distance < aggroRange && distance > 1.2f) {
-            dx /= distance;
-            dz /= distance;
+            float moveX = (dx / distance) * speed * deltaTime;
+            float moveZ = (dz / distance) * speed * deltaTime;
 
-            float moveX = dx * speed * deltaTime;
-            float moveZ = dz * speed * deltaTime;
+            for (int i = 0; i < allEnemies.size; i++) {
+                EnemyEntity other = allEnemies.get(i);
+                if (other == this) continue;
+
+                float diffX = x - other.x;
+                float diffZ = z - other.z;
+                float distSq = diffX * diffX + diffZ * diffZ;
+                float personalSpace = 1.1f;
+
+                if (distSq < personalSpace * personalSpace && distSq > 0) {
+                    float d = (float)Math.sqrt(distSq);
+                    float force = (personalSpace - d) / personalSpace;
+                    moveX += (diffX / d) * force * speed * deltaTime;
+                    moveZ += (diffZ / d) * force * speed * deltaTime;
+                }
+            }
 
             if (!mapManager.isColliding(x + moveX, z, radius)) {
                 x += moveX;
             }
             if (!mapManager.isColliding(x, z + moveZ, radius)) {
                 z += moveZ;
-            }
-        }
-
-        applySoftCollision(mapManager, allEnemies);
-    }
-
-    private void applySoftCollision(MapManager mapManager, Array<EnemyEntity> allEnemies) {
-        for (EnemyEntity other : allEnemies) {
-            if (other == this) continue;
-
-            float diffX = x - other.x;
-            float diffZ = z - other.z;
-            float distanceSquared = (diffX * diffX) + (diffZ * diffZ);
-
-            float combinedRadii = this.radius + other.radius;
-
-            if ((distanceSquared < combinedRadii) && distanceSquared > 0.001f) {
-                float distance = (float)Math.sqrt(distanceSquared);
-
-                float overlap = combinedRadii - distance;
-
-                float pushX = (diffX / distance) * (overlap * 0.5f);
-                float pushZ = (diffZ / distance) * (overlap * 0.5f);
-
-                if (!mapManager.isColliding(x + pushX, z, radius)) x += pushX;
-                if (!mapManager.isColliding(x, z + pushZ, radius)) z += pushZ;
             }
         }
     }

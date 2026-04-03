@@ -151,6 +151,11 @@ public class ExtractionGame extends ApplicationAdapter {
             modelBatch.render(enemyBrush, environment);
         }
 
+        modelBatch.end();
+
+        Gdx.gl.glClear(com.badlogic.gdx.graphics.GL20.GL_DEPTH_BUFFER_BIT);
+
+        modelBatch.begin(camera);
         modelBatch.render(swordInstance, environment);
         modelBatch.end();
 
