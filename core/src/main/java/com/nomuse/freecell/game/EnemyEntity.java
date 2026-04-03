@@ -33,8 +33,8 @@ public class EnemyEntity {
 
         y += yVelocity * deltaTime;
 
-        if (y <= 1.5f) {
-            y = 1.5f;
+        if (y <= 1.7f) {
+            y = 1.7f;
             yVelocity = 0f;
             isGrounded = true;
         } else {

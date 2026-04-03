@@ -38,9 +38,12 @@ public class ExtractionGame extends ApplicationAdapter {
     private float moveSpeed = 8f;
     private float mouseSensitivity = 0.2f;
 
-    // Melee weapon visuals
+    // Visuals
     private Model swordModel;
     private ModelInstance swordInstance;
+    private ModelInstance torsoBrush;
+    private ModelInstance headBrush;
+    private ModelInstance limbBrush;
 
     private float swordScale = 0.0025f;
     private float hiltOffsetY = 0f;
@@ -101,6 +104,25 @@ public class ExtractionGame extends ApplicationAdapter {
         swordInstance.materials.get(0).set(ColorAttribute.createDiffuse(Color.DARK_GRAY));
         swordInstance.materials.get(0).set(ColorAttribute.createSpecular(Color.WHITE));
         swordInstance.materials.get(0).set(FloatAttribute.createShininess(100f));
+
+        // Humanoid models
+        // Torso
+        Model torsoModel = modelBuilder.createBox(0.4f, 0.6f, 0.4f,
+            new Material(ColorAttribute.createDiffuse(Color.FIREBRICK)),
+            VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
+        // Head
+        Model headModel = modelBuilder.createBox(0.4f, 0.4f, 0.4f,
+            new Material(ColorAttribute.createDiffuse(Color.MAROON)),
+            VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
+        // Limb
+        Model limbModel = modelBuilder.createBox(0.2f, 0.6f, 0.2f,
+            new Material(ColorAttribute.createDiffuse(Color.BROWN)),
+            VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
+        
+        // Create instances
+        torsoBrush = new ModelInstance(torsoModel);
+        headBrush = new ModelInstance(headModel);
+        limbBrush = new ModelInstance(limbModel);
     }
 
     @Override
@@ -109,9 +131,8 @@ public class ExtractionGame extends ApplicationAdapter {
 
         // Process Input
         handleInput(delta);
-        
-        // Server Updates
         localPlayer.update(delta);
+
         for (int i = 0; i < enemies.size; i++) {
             EnemyEntity enemy = enemies.get(i);
             enemy.update(delta, localPlayer, mapManager, enemies);
@@ -127,11 +148,10 @@ public class ExtractionGame extends ApplicationAdapter {
         for (ModelInstance block : mapManager.blocks) {
             shadowBatch.render(block);
         }
-        
+
         for (int i = 0; i < enemies.size; i++) {
             EnemyEntity enemy = enemies.get(i);
-            enemyBrush.transform.setToTranslation(enemy.x, enemy.y, enemy.z);
-            shadowBatch.render(enemyBrush);
+            renderHumanoid(enemy, shadowBatch, null);
         }
 
         shadowBatch.end();
@@ -140,27 +160,80 @@ public class ExtractionGame extends ApplicationAdapter {
         ScreenUtils.clear(0.5f, 0.8f, 1f, 1f, true);
 
         modelBatch.begin(camera);
-        
         for (ModelInstance block : mapManager.blocks) {
             modelBatch.render(block, environment);
         }
-
-        for (int i = 0; i < enemies.size; i++) {
-            EnemyEntity enemy = enemies.get(i);
-            enemyBrush.transform.setToTranslation(enemy.x, enemy.y, enemy.z);
-            modelBatch.render(enemyBrush, environment);
-        }
-
         modelBatch.end();
 
+        // Clear depth buffer to prevent clipping
         Gdx.gl.glClear(com.badlogic.gdx.graphics.GL20.GL_DEPTH_BUFFER_BIT);
 
         modelBatch.begin(camera);
+
+        // Draw visible humanoid enemies
+        for (int i = 0; i < enemies.size; i++) {
+            EnemyEntity enemy = enemies.get(i);
+            renderHumanoid(enemy, modelBatch, environment);
+        }
+
+        // Draw sword
         modelBatch.render(swordInstance, environment);
+
         modelBatch.end();
 
+        // Press ESC to release mouse cursor
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             Gdx.input.setCursorCatched(!Gdx.input.isCursorCatched());
+        }
+    }
+
+    private void renderHumanoid(EnemyEntity enemy, ModelBatch batch, Environment env) {
+        float ex = enemy.x;
+        float ey = enemy.y;
+        float ez = enemy.z;
+
+        // Torso
+        torsoBrush.transform.setToTranslation(ex, ey, ez);
+        if (env == null) {
+            batch.render(torsoBrush);
+        } else {
+            batch.render(torsoBrush, env);
+        }
+
+        // Head
+        headBrush.transform.setToTranslation(ex, ey + 0.5f, ez);
+        if (env == null) {
+            batch.render(headBrush);
+        } else {
+            batch.render(headBrush, env);
+        }
+
+        // Legs
+        limbBrush.transform.setToTranslation(ex - 0.1f, ey - 0.6f, ez);
+        if (env == null) {
+            batch.render(limbBrush);
+        } else {
+            batch.render(limbBrush, env);
+        }
+        limbBrush.transform.setToTranslation(ex + 0.1f, ey - 0.6f, ez);
+        if (env == null) {
+            batch.render(limbBrush);
+        } else {
+            batch.render(limbBrush, env);
+        }
+
+        // Arms
+        limbBrush.transform.setToTranslation(ex - 0.3f, ey, ez);
+        if (env == null) {
+            batch.render(limbBrush);
+        } else {
+            batch.render(limbBrush, env);
+        }
+        limbBrush.transform.setToTranslation(ex + 0.3f, ey, ez);
+        if (env == null) {
+            batch.render(limbBrush);
+        } else {
+            batch.render(limbBrush, env);
         }
     }
 
