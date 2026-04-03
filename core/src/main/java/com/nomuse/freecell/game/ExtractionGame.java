@@ -25,6 +25,9 @@ import com.badlogic.gdx.math.collision.BoundingBox;
 import com.badlogic.gdx.audio.Sound;
 
 public class ExtractionGame extends ApplicationAdapter {
+
+    private final Vector3 tmpForward = new Vector3();
+    private final Vector3 tmpRight = new Vector3();
     
     private PerspectiveCamera camera;
     private ModelBatch modelBatch;
@@ -71,6 +74,8 @@ public class ExtractionGame extends ApplicationAdapter {
     @Override
     public void create() {
 
+        mapManager = new MapManager();
+
         localPlayer = new PlayerEntity(1);
 
         camera = new PerspectiveCamera(90, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
@@ -83,6 +88,7 @@ public class ExtractionGame extends ApplicationAdapter {
         shadowBatch = new ModelBatch(new DepthShaderProvider());
 
         ModelBuilder modelBuilder = new ModelBuilder();
+        mapManager.buildVisuals(modelBuilder);
 
         // Setup environment
         environment = new Environment();
@@ -90,15 +96,13 @@ public class ExtractionGame extends ApplicationAdapter {
         
         // Setup sounds
         footstepSound = Gdx.audio.newSound(Gdx.files.internal("sounds/footsteps/footstep01.ogg"));
-        hitSound = Gdx.audio.newSound(Gdx.files.internal("sounds/npc/hit01.wav"));
+        hitSound = Gdx.audio.newSound(Gdx.files.internal("sounds/npc/hit02.wav"));
 
         shadowLight = new DirectionalShadowLight(4096, 4096, 45f, 45f, 1f, 300f);
         shadowLight.set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f);
 
         environment.add(shadowLight);
         environment.shadowMap = shadowLight;
-
-        mapManager = new MapManager(modelBuilder);
 
         // --- SPAWN ENEMIES ---
         enemies = new Array<>();
@@ -282,27 +286,27 @@ public class ExtractionGame extends ApplicationAdapter {
         localPlayer.pitch += deltaY;
         localPlayer.pitch = MathUtils.clamp(localPlayer.pitch, -89f, 89f);
 
-        Vector3 forward = new Vector3((float)Math.sin(Math.toRadians(localPlayer.yaw)), 0, (float)Math.cos(Math.toRadians(localPlayer.yaw))).nor();
-        Vector3 right = new Vector3(forward).crs(Vector3.Y).nor();
+        tmpForward.set((float)Math.sin(Math.toRadians(localPlayer.yaw)), 0, (float)Math.cos(Math.toRadians(localPlayer.yaw))).nor();
+        tmpRight.set(tmpForward).crs(Vector3.Y).nor();
 
         float dx = 0;
         float dz = 0;
 
         if (Gdx.input.isKeyPressed(Input.Keys.W)) {
-            dx -= forward.x * moveSpeed * deltaTime;
-            dz -= forward.z * moveSpeed * deltaTime;
+            dx -= tmpForward.x * moveSpeed * deltaTime;
+            dz -= tmpForward.z * moveSpeed * deltaTime;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.S)) {
-            dx += forward.x * moveSpeed * deltaTime;
-            dz += forward.z * moveSpeed * deltaTime;
+            dx += tmpForward.x * moveSpeed * deltaTime;
+            dz += tmpForward.z * moveSpeed * deltaTime;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.A)) {
-            dx += right.x * moveSpeed * deltaTime;
-            dz += right.z * moveSpeed * deltaTime;
+            dx += tmpRight.x * moveSpeed * deltaTime;
+            dz += tmpRight.z * moveSpeed * deltaTime;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.D)) {
-            dx -= right.x * moveSpeed * deltaTime;
-            dz -= right.z * moveSpeed * deltaTime;
+            dx -= tmpRight.x * moveSpeed * deltaTime;
+            dz -= tmpRight.z * moveSpeed * deltaTime;
         }
 
         float playerRadius = 0.4f;
@@ -344,8 +348,8 @@ public class ExtractionGame extends ApplicationAdapter {
 
             // Hit detection cone
             float hitRange = 2.0f;
-            float lookX = -forward.x;
-            float lookZ = -forward.z;
+            float lookX = -tmpForward.x;
+            float lookZ = -tmpForward.z;
 
             for (int i = 0; i < enemies.size; i++) {
                 EnemyEntity enemy = enemies.get(i);
@@ -402,22 +406,22 @@ public class ExtractionGame extends ApplicationAdapter {
 
     // Collect sound garbage
     private void disposeSounds() {
-        footstepSound.dispose();
-        hitSound.dispose();
+        if (footstepSound != null) footstepSound.dispose();
+        if (hitSound != null) hitSound.dispose();
     }
 
     // Collect model garbage
     private void disposeModels() {
-        swordModel.dispose();
-        enemyModel.dispose();
+        if (swordModel != null) swordModel.dispose();
+        if (enemyModel != null) enemyModel.dispose();
     }
 
     // Collect world garbage
     private void disposeWorld() {
-        modelBatch.dispose();
-        shadowBatch.dispose();
-        shadowLight.dispose();
-        mapManager.dispose();
+        if (modelBatch != null) modelBatch.dispose();
+        if (shadowBatch != null) shadowBatch.dispose();
+        if (shadowLight != null) shadowLight.dispose();
+        if (mapManager != null) mapManager.dispose();
     }
 
     // -- GARBAGE COLLECTION --

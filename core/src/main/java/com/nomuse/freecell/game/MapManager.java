@@ -12,61 +12,63 @@ import com.badlogic.gdx.utils.Array;
 
 import java.util.Random;
 
-// ./gradlew :lwjgl3:run
-// git add .
-// git commit -m "changes"
-// git push
-
 public class MapManager {
-    // Build all 3D blocks in the world
+    // Client-side visuals
     public Array<ModelInstance> blocks = new Array<>();
-
-    // Collisioin grid
-    public boolean[][] solidGrid = new boolean[20][20];
-
     private Model floorModel;
     private Model wallModel;
 
-    public MapManager(ModelBuilder modelBuilder) {
-        // 2x2x2 green cube for floor
-        floorModel = modelBuilder.createBox(2f, 2f, 2f,
-            new Material(ColorAttribute.createDiffuse(Color.FOREST)),
-            Usage.Position | Usage.Normal);
+    // Server-side logic
+    public boolean[][] solidGrid = new boolean[20][20];
 
-        // 2x2x2 gray cube for walls
-        wallModel = modelBuilder.createBox(2f, 2f, 2f,
-            new Material(ColorAttribute.createDiffuse(Color.GRAY)),
-            Usage.Position | Usage.Normal);
-
-        generateMap();
+    public MapManager() {
+        generateLogicMap();
     }
 
-    private void generateMap() {
+    // Initialize math/logic
+    private void generateLogicMap() {
         Random rand = new Random();
-
-        // Generate a 20x20 grid
         for (int x = -10; x < 10; x++) {
             for (int z = -10; z < 10; z++) {
                 int gridX = x + 10;
                 int gridZ = z + 10;
 
                 solidGrid[gridX][gridZ] = false;
-
-                ModelInstance floor = new ModelInstance(floorModel);
-                floor.transform.setToTranslation(x * 2f, 0f, z * 2f);
-                blocks.add(floor);
-
                 boolean isSpawnArea = (x >= -1 && x <= 1) && (z >= 1 && z <= 3);
 
                 if (!isSpawnArea && rand.nextFloat() < 0.2f) {
-                    ModelInstance wall = new ModelInstance(wallModel);
-                    wall.transform.setToTranslation(x * 2f, 2f, z * 2f);
-                    blocks.add(wall);
-
                     solidGrid[gridX][gridZ] = true;
                 }
             }
         }
+    }
+
+    // Initialize visuals
+    public void buildVisuals(ModelBuilder modelBuilder) {
+        floorModel = modelBuilder.createBox(2f, 2f, 2f,
+            new Material(ColorAttribute.createDiffuse(Color.FOREST)),
+            Usage.Position | Usage.Normal);
+        
+        wallModel = modelBuilder.createBox(2f, 2f, 2f,
+            new Material(ColorAttribute.createDiffuse(Color.GRAY)),
+            Usage.Position | Usage.Normal);
+        
+            for (int x = -10; x < 10; x++) {
+                for (int z = -10; z < 10; z++) {
+                    int gridX = x + 10;
+                    int gridZ = z + 10;
+
+                    ModelInstance floor = new ModelInstance(floorModel);
+                    floor.transform.setToTranslation(x * 2f, 0f, z * 2f);
+                    blocks.add(floor);
+
+                    if (solidGrid[gridX][gridZ]) {
+                        ModelInstance wall = new ModelInstance(wallModel);
+                        wall.transform.setToTranslation(x * 2f, 2f, z * 2f);
+                        blocks.add(wall);
+                    }
+                }
+            }
     }
 
     public boolean isColliding(float worldX, float worldZ, float playerRadius) {
@@ -85,7 +87,6 @@ public class MapManager {
                 if (gx < 0 || gx >= 20 || gz < 0 || gz >= 20) {
                     return true;
                 }
-
                 if (solidGrid[gx][gz]) {
                     return true;
                 }
@@ -94,9 +95,8 @@ public class MapManager {
         return false;
     }
 
-
     public void dispose() {
-        floorModel.dispose();
-        wallModel.dispose();
+        if (floorModel != null) floorModel.dispose();
+        if (wallModel != null) wallModel.dispose();
     }
 }
