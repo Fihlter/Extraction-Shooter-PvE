@@ -65,12 +65,15 @@ public class ExtractionGame extends ApplicationAdapter {
 
     // Enemy vars
     private Array<EnemyEntity> enemies;
+    private Array<ParticleEntity> particles = new Array<>();
+    private ModelInstance particleBrush;
     private Model enemyModel;
     private ModelInstance enemyBrush;
 
     // Audio state
     private Sound footstepSound;
     private Sound hitSound;
+    private Sound deathSound;
     private float footstepTimer = 0f;
     private static final float FOOTSTEP_INTERVAL = 0.35f;
 
@@ -103,6 +106,13 @@ public class ExtractionGame extends ApplicationAdapter {
         // Setup sounds
         footstepSound = Gdx.audio.newSound(Gdx.files.internal("sounds/footsteps/footstep01.ogg"));
         hitSound = Gdx.audio.newSound(Gdx.files.internal("sounds/npc/hit02.wav"));
+        deathSound = Gdx.audio.newSound(Gdx.files.internal("sounds/npc/npc_death.wav"));
+
+        // NPC death particle model
+        Model particleModel = modelBuilder.createBox(0.2f, 0.2f, 0.2f,
+            new Material(ColorAttribute.createDiffuse(Color.FIREBRICK)),
+            VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
+        particleBrush = new ModelInstance(particleModel);
 
         shadowLight = new DirectionalShadowLight(4096, 4096, 45f, 45f, 1f, 300f);
         shadowLight.set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f);
@@ -167,6 +177,24 @@ public class ExtractionGame extends ApplicationAdapter {
         for (int i = 0; i < enemies.size; i++) {
             EnemyEntity enemy = enemies.get(i);
             enemy.update(delta, players, mapManager, enemies);
+
+            if (enemy.health <= 0) {
+                if (deathSound != null) deathSound.play(1.0f, MathUtils.random(0.85f, 1.15f), 0f);
+
+                for (int p = 0; p < 50; p++) {
+                    particles.add(new ParticleEntity(enemy.x, enemy.y + 0.5f, enemy.z));
+                }
+
+                enemies.removeIndex(i);
+            }
+        }
+
+        // Update particles
+        for (int i = particles.size - 1; i >= 0; i--) {
+            ParticleEntity p = particles.get(i);
+            if (p.update(delta)) {
+                particles.removeIndex(i);
+            }
         }
 
         // Update Camera
@@ -205,6 +233,17 @@ public class ExtractionGame extends ApplicationAdapter {
         for (int i = 0; i < enemies.size; i++) {
             EnemyEntity enemy = enemies.get(i);
             renderHumanoid(enemy, modelBatch, environment);
+        }
+        
+        // Draw particles
+        for (int i = 0; i < particles.size; i++) {
+            ParticleEntity p = particles.get(i);
+            float scale = p.life / p.maxLife;
+            particleBrush.transform.setToTranslation(p.x, p.y, p.z).scale(scale, scale, scale);
+
+            modelBatch.render(particleBrush, environment);
+
+            modelBatch.flush();
         }
 
         // Draw sword
@@ -268,7 +307,7 @@ public class ExtractionGame extends ApplicationAdapter {
         } else {
             batch.render(limbBrush, env);
         }
-
+        
         // Arms
         limbBrush.transform.set(tmpMatrix).translate(-0.3f, 0, 0);
         if (env == null) {
@@ -282,9 +321,9 @@ public class ExtractionGame extends ApplicationAdapter {
         } else {
             batch.render(limbBrush, env);
         }
-
+  
         batch.flush();
-    }
+    }   
 
     // -- INPUT HANDLING --
     private void handleInput(float deltaTime) {
@@ -376,7 +415,7 @@ public class ExtractionGame extends ApplicationAdapter {
                     float dotProduct = (lookX * dirX) + (lookZ * dirZ);
 
                     if (dotProduct > 0.5f) {
-                        enemy.takeHit(localPlayer.x, localPlayer.z);
+                        enemy.takeHit(localPlayer.x, localPlayer.z, 35f);
                         // Play hit sound
                         hitSound.play(1.0f, MathUtils.random(0.9f, 1.1f), 0f);
                     }
@@ -419,6 +458,7 @@ public class ExtractionGame extends ApplicationAdapter {
     private void disposeSounds() {
         if (footstepSound != null) footstepSound.dispose();
         if (hitSound != null) hitSound.dispose();
+        if (deathSound != null) deathSound.dispose();
     }
 
     // Collect model garbage

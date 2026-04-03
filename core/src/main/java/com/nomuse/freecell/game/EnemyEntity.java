@@ -22,6 +22,7 @@ public class EnemyEntity {
 
     // AI
     public float aggroRange = 15f;
+    public float health = 100f;
 
     // Hit detection vars
     public float damageTimer = 0f;
@@ -36,7 +37,8 @@ public class EnemyEntity {
         this.z = startZ;
     }
 
-    public void takeHit(float sourceX, float sourceZ) {
+    public void takeHit(float sourceX, float sourceZ, float damage) {
+        health -= damage;
         damageTimer = DAMAGE_DURATION;
 
         float dx = x - sourceX;
@@ -101,6 +103,9 @@ public class EnemyEntity {
                     float dz = closestPlayer.z - z;
                     moveX = (dx / distanceToPlayer * speed);
                     moveZ = (dz / distanceToPlayer * speed);
+
+                    currentPath.clear();
+                    pathTimer = 1.0f;
                 } else {
                     // Update path 2x/sec
                     pathTimer += deltaTime;
@@ -116,7 +121,7 @@ public class EnemyEntity {
                         float nz = nextNode.y - z;
                         float distToNode = (float)Math.sqrt(nx*nx + nz*nz);
 
-                        if (distToNode < 0.3f) {
+                        if (distToNode < 0.8f) {
                             currentPath.removeIndex(0);
                         } else {
                             moveX = (nx / distToNode) * speed;
@@ -140,6 +145,8 @@ public class EnemyEntity {
                         moveZ += (diffZ / d) * force * speed;
                     }
                 }
+            } else {
+                currentPath.clear();
             }
         }
 
