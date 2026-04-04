@@ -88,7 +88,10 @@ public class EnemyEntity {
         // Scan all players to find closest
         for (int i = 0; i < players.size; i++) {
             PlayerEntity p = players.get(i);
-            float distSq = (p.x * p.x) + (p.z * p.z);
+
+            float dx = p.x - x;
+            float dz = p.z - z;
+            float distSq = (dx * dx) + (dz * dz);
 
             if (distSq < closestDistSq) {
                 closestDistSq = distSq;
