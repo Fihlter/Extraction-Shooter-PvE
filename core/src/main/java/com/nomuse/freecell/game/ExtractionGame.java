@@ -101,12 +101,6 @@ public class ExtractionGame extends ApplicationAdapter {
     private TextureRegion fboRegion;
     private ShapeRenderer shapeRenderer;
 
-    public EnemyEntity() {
-        
-    }
-
-    public EnemyEntity(int id){}
-
     @Override
     public void create() {
 
@@ -128,7 +122,6 @@ public class ExtractionGame extends ApplicationAdapter {
 
         modelBuilder = new ModelBuilder();
         font = new BitmapFont();
-        mapManager.buildVisuals(modelBuilder);
 
         // Setup environment
         environment = new Environment();
@@ -626,9 +619,10 @@ public class ExtractionGame extends ApplicationAdapter {
 
         enemies.clear();
         for (int i = 0; i < 5; i++) {
-            EnemyEntity enemy = new EnemyEntity();
-            enemy.x = com.badlogic.gdx.math.MathUtils.random(-15f, 15f);
-            enemy.z = com.badlogic.gdx.math.MathUtils.random(-15f, 15f);
+
+            float spawnX = com.badlogic.gdx.math.MathUtils.random(-15f, 15f);
+            float spawnZ = com.badlogic.gdx.math.MathUtils.random(-15f, 15f);
+            EnemyEntity enemy = new EnemyEntity(i, spawnX, 1.6f, spawnZ);
             enemies.add(enemy);
         }
 
