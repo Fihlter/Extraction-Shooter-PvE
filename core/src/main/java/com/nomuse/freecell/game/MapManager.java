@@ -112,7 +112,8 @@ public class MapManager {
 
         Material floorMat = new Material(
             TextureAttribute.createDiffuse(floorTexture),
-            TextureAttribute.createEmissive(floorTexture)
+            TextureAttribute.createEmissive(floorTexture),
+            ColorAttribute.createEmissive(Color.WHITE)
         );
 
         floorModel = modelBuilder.createRect(
