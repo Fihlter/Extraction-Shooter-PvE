@@ -27,6 +27,7 @@ import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 
 public class ExtractionGame extends ApplicationAdapter {
 
@@ -36,6 +37,14 @@ public class ExtractionGame extends ApplicationAdapter {
     private final Vector3 tmpForward = new Vector3();
     private final Vector3 tmpRight = new Vector3();
     private final Matrix4 tmpMatrix = new Matrix4();
+
+    // State machine
+    public enum GameState { LOBBY, PLAYING }
+    public GameState currentState = GameState.LOBBY;
+
+    // UI elements
+    private BitmapFont font;
+    private ModelBuilder modelBuilder;
     
     private PerspectiveCamera camera;
     private ModelBatch modelBatch;
@@ -95,9 +104,9 @@ public class ExtractionGame extends ApplicationAdapter {
     @Override
     public void create() {
 
-        mapManager = new MapManager();
+        //mapManager = new MapManager();
 
-        localPlayer = new PlayerEntity(1);
+        //localPlayer = new PlayerEntity(1);
 
         players = new Array<>();
         players.add(localPlayer);
@@ -111,7 +120,8 @@ public class ExtractionGame extends ApplicationAdapter {
         modelBatch = new ModelBatch();
         //shadowBatch = new ModelBatch(new DepthShaderProvider());
 
-        ModelBuilder modelBuilder = new ModelBuilder();
+        modelBuilder = new ModelBuilder();
+        font = new BitmapFont();
         mapManager.buildVisuals(modelBuilder);
 
         // Setup environment
@@ -131,10 +141,10 @@ public class ExtractionGame extends ApplicationAdapter {
         environment.add(playerLight);
 
         // --- SPAWN ENEMIES ---
-        enemies = new Array<>();
+        //enemies = new Array<>();
         // Spawn two enemies nearby
-        enemies.add(new EnemyEntity(101, 4f, 3f, 4f));
-        enemies.add(new EnemyEntity(102, -4f, 3f, 8f));
+        //enemies.add(new EnemyEntity(101, 4f, 3f, 4f));
+        //enemies.add(new EnemyEntity(102, -4f, 3f, 8f));
 
         // Create a 1x1x1 Red Cube to represent enemies
         enemyModel = modelBuilder.createBox(1f, 1f, 1f,
@@ -197,14 +207,70 @@ public class ExtractionGame extends ApplicationAdapter {
         shapeRenderer = new ShapeRenderer();
     }
 
-    // -- HANDLE RENDERING --
     @Override
     public void render() {
+        if (currentState == GameState.LOBBY) {
+            renderLobby();
+        } else if (currentState == GameState.PLAYING) {
+            renderGame();
+        }
+    }
+
+    private void renderLobby() {
+        com.badlogic.gdx.utils.ScreenUtils.clear(0.05f, 0.05f, 0.08f, 1f, true);
+
+        if (Gdx.input.isCursorCatched()) {
+            Gdx.input.setCursorCatched(false);
+        }
+
+        shapeRenderer.getProjectionMatrix().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        shapeRenderer.updateMatrices();
+        Gdx.gl.glDisable(com.badlogic.gdx.graphics.GL20.GL_DEPTH_TEST);
+
+        float btnWidth = 250;
+        float btnHeight = 60;
+        float btnX = (Gdx.graphics.getWidth() - btnWidth) / 2f;
+        float btnY = (Gdx.graphics.getHeight() - btnHeight) / 2f;
+
+        float mouseX = Gdx.input.getX();
+        float mouseY = Gdx.graphics.getHeight() - Gdx.input.getY();
+        boolean isHovering = mouseX >= btnY && mouseX <= btnX + btnWidth &&
+                            mouseY >= btnY && mouseY <= btnY + btnHeight;
+
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        if (isHovering) {
+            shapeRenderer.setColor(0.2f, 0.8f, 1.0f, 1f); // Bright neon cyan
+            if (Gdx.input.isButtonJustPressed(com.badlogic.gdx.Input.Buttons.LEFT)) {
+                startGame();
+            }
+        } else {
+            shapeRenderer.setColor(0.1f, 0.4f, 0.6f, 1f); // Idle dark cyan
+        }
+
+        shapeRenderer.rect(btnX, btnY, btnWidth, btnHeight);
+        shapeRenderer.end();
+
+        spriteBatch.getProjectionMatrix().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        spriteBatch.begin();
+        font.getData().setScale(1.5f);
+        font.setColor(com.badlogic.gdx.graphics.Color.WHITE);
+        font.draw(spriteBatch, "ENTER GRID", btnX + 50, btnY + 40);
+        spriteBatch.end();
+    }
+
+    // -- HANDLE RENDERING --
+    private void renderGame() {
         float delta = Gdx.graphics.getDeltaTime();
 
         // Process Input
         handleInput(delta);
         localPlayer.update(delta);
+
+        if (localPlayer.health <= 0) {
+            // TODO: Check if squadmates are alive before kicking to lobby
+            currentState = GameState.LOBBY;
+            return;
+        }
 
         if (localPlayer.justTookDamage) {
             localPlayer.justTookDamage = false;
@@ -540,6 +606,29 @@ public class ExtractionGame extends ApplicationAdapter {
         camera.update();
     }
 
+    private void startGame() {
+        currentState = GameState.PLAYING;
+        Gdx.input.setCursorCatched(true);
+
+        localPlayer = new PlayerEntity(1);
+        players.clear();
+        players.add(localPlayer);
+
+        if (mapManager != null) mapManager.dispose();
+        mapManager = new MapManager();
+        mapManager.buildVisuals(modelBuilder);
+
+        enemies.clear();
+        for (int i = 0; i < 5; i++) {
+            EnemyEntity enemy = new EnemyEntity();
+            enemy.x = com.badlogic.gdx.math.MathUtils.random(-15f, 15f);
+            enemy.z = com.badlogic.gdx.math.MathUtils.random(-15f, 15f);
+            enemies.add(enemy);
+        }
+
+        particles.clear();
+    }
+
     // Collect sound garbage
     private void disposeSounds() {
         if (footstepSound != null) footstepSound.dispose();
@@ -565,6 +654,7 @@ public class ExtractionGame extends ApplicationAdapter {
         if (fbo != null) fbo.dispose();
         if (spriteBatch != null) spriteBatch.dispose();
         if (shapeRenderer != null) shapeRenderer.dispose();
+        if (font != null) font.dispose();
     }
 
     // -- GARBAGE COLLECTION --
