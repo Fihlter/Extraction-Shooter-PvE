@@ -14,6 +14,9 @@ public class PlayerEntity {
     public float attackOffset = 0f;
     public static final float ATTACK_DURATION = 0.35f;
 
+    public float maxHealth = 100f;
+    public float health = 100f;
+
     public float yVelocity = 0f;
     public boolean isGrounded = true;
 

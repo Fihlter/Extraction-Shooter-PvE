@@ -26,6 +26,7 @@ import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 public class ExtractionGame extends ApplicationAdapter {
 
@@ -48,7 +49,7 @@ public class ExtractionGame extends ApplicationAdapter {
     // Network player state
     private PlayerEntity localPlayer;
     private Array<PlayerEntity> players;
-    private float moveSpeed = 8f;
+    private float moveSpeed = 4f;
     private float mouseSensitivity = 0.2f;
 
     // Visuals
@@ -65,10 +66,6 @@ public class ExtractionGame extends ApplicationAdapter {
     private final Color hitColor = new Color(Color.RED);
     private final Color workingColor = new Color();
 
-    // Sword vars
-    private float swordScale = 0.0025f;
-    private float hiltOffsetY = 0f;
-
     // Enemy vars
     private Array<EnemyEntity> enemies;
     private Array<ParticleEntity> particles = new Array<>();
@@ -80,6 +77,7 @@ public class ExtractionGame extends ApplicationAdapter {
     private Sound footstepSound;
     private Sound hitSound;
     private Sound deathSound;
+    private Sound swooshSound;
     private float footstepTimer = 0f;
     private static final float FOOTSTEP_INTERVAL = 0.35f;
 
@@ -91,6 +89,7 @@ public class ExtractionGame extends ApplicationAdapter {
     private FrameBuffer fbo;
     private SpriteBatch spriteBatch;
     private TextureRegion fboRegion;
+    private ShapeRenderer shapeRenderer;
 
     @Override
     public void create() {
@@ -123,6 +122,7 @@ public class ExtractionGame extends ApplicationAdapter {
         footstepSound = Gdx.audio.newSound(Gdx.files.internal("sounds/footsteps/footstep01.ogg"));
         hitSound = Gdx.audio.newSound(Gdx.files.internal("sounds/npc/hit02.wav"));
         deathSound = Gdx.audio.newSound(Gdx.files.internal("sounds/npc/npc_death.wav"));
+        swooshSound = Gdx.audio.newSound(Gdx.files.internal("sounds/player/swoosh.wav"));
 
         // Player lantern
         playerLight = new PointLight().set(0.7f, 0.8f, 1.0f, 0f, 0f, 0f, 12f);
@@ -141,8 +141,11 @@ public class ExtractionGame extends ApplicationAdapter {
         enemyBrush = new ModelInstance(enemyModel);
 
         // Initialize particle model
+        Color hotSpark = new Color(1.0f, 0.7f, 0.2f, 1f);
+
         particleModel = modelBuilder.createBox(1f, 1f, 1f,
-            new Material(ColorAttribute.createDiffuse(Color.FIREBRICK)),
+            new Material(ColorAttribute.createDiffuse(Color.FIREBRICK),
+                        ColorAttribute.createEmissive(hotSpark)),
             VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
 
         // Create glowing hand
@@ -188,6 +191,8 @@ public class ExtractionGame extends ApplicationAdapter {
         fbo = new FrameBuffer(Pixmap.Format.RGBA8888, Gdx. graphics. getWidth(), Gdx.graphics.getHeight(), true);
         fboRegion = new TextureRegion(fbo.getColorBufferTexture());
         fboRegion.flip(false, true);
+
+        shapeRenderer = new ShapeRenderer();
     }
 
     // -- HANDLE RENDERING --
@@ -256,6 +261,22 @@ public class ExtractionGame extends ApplicationAdapter {
         vfxManager.endInputCapture();
         vfxManager.applyEffects();
         vfxManager.renderToScreen();
+
+        // Render HUD
+        shapeRenderer.getProjectionMatrix().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        shapeRenderer.updateMatrices();
+
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+
+        shapeRenderer.setColor(0.05f, 0.05f, 0.08f, 0.9f);
+        shapeRenderer.rect(20, 20, 300, 25);
+
+        float healthPercent = Math.max(0, localPlayer.health / localPlayer.maxHealth);
+
+        shapeRenderer.setColor(0.2f, 0.8f, 1.0f, 1f);
+        shapeRenderer.rect(22, 22, (300 - 4) * healthPercent, 25 - 4);
+
+        shapeRenderer.end();
 
         // Press ESC to release mouse cursor
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
@@ -416,6 +437,10 @@ public class ExtractionGame extends ApplicationAdapter {
             localPlayer.isAttacking = true;
             localPlayer.attackTimer = 0f;
 
+            if (swooshSound != null) {
+                swooshSound.play(1.0f, MathUtils.random(0.85f, 1.15f), 0f);
+            }
+
             // Hit detection cone
             float hitRange = 2.0f;
             float lookX = -tmpForward.x;
@@ -504,6 +529,7 @@ public class ExtractionGame extends ApplicationAdapter {
         if (footstepSound != null) footstepSound.dispose();
         if (hitSound != null) hitSound.dispose();
         if (deathSound != null) deathSound.dispose();
+        if (swooshSound != null) swooshSound.dispose();
     }
 
     // Collect model garbage
@@ -521,6 +547,7 @@ public class ExtractionGame extends ApplicationAdapter {
         if (bloomEffect != null) bloomEffect.dispose();
         if (fbo != null) fbo.dispose();
         if (spriteBatch != null) spriteBatch.dispose();
+        if (shapeRenderer != null) shapeRenderer.dispose();
     }
 
     // -- GARBAGE COLLECTION --
