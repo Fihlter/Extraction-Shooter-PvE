@@ -1,11 +1,14 @@
 package com.nomuse.freecell.game;
 
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.VertexAttributes.Usage;
 import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
+import com.badlogic.gdx.graphics.g3d.attributes.TextureAttribute;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.MathUtils;
@@ -19,6 +22,9 @@ public class MapManager {
     public Array<ModelInstance> blocks = new Array<>();
     private Model floorModel;
     private Model wallModel;
+
+    // Lightmap image
+    private Texture floorTexture;
 
     // Server-side logic
     public boolean[][] solidGrid = new boolean[20][20];
@@ -47,11 +53,8 @@ public class MapManager {
 
     // Initialize visuals
     public void buildVisuals(ModelBuilder modelBuilder) {
-        floorModel = modelBuilder.createBox(2f, 2f, 2f,
-            new Material(ColorAttribute.createDiffuse(Color.FOREST)),
-            Usage.Position | Usage.Normal);
-
-        Color softWhiteBlue = new Color(0.7f, 0.9f, 1.0f, 1f);
+        // Setup wall materials
+        Color softWhiteBlue = new Color(0.7f, 0.8f, 1.0f, 1f);
         Color strongGlow = new Color(0.9f, 0.95f, 1.0f, 1f);
 
         wallModel = modelBuilder.createBox(2f, 2f, 2f,
@@ -61,41 +64,75 @@ public class MapManager {
             ),
             Usage.Position | Usage.Normal);
 
-        Color floorGlowColor = new Color(0.3f, 0.5f, 0.9f, 0.1f);
+        // Generate lightmap
+        Pixmap lightmap = new Pixmap(512, 512, Pixmap.Format.RGBA8888);
+        Color baseFloor = new Color(0.1f, 0.1f, 0.12f, 1f);
+        Color glowColor = new Color(0.3f, 0.5f, 0.9f, 1f);
 
-        for (int x = -10; x < 10; x++) {
-            for (int z = -10; z < 10; z++) {
-                int gridX = x + 10;
-                int gridZ = z + 10;
-
-                ModelInstance floor = new ModelInstance(floorModel);
-                floor.transform.setToTranslation(x * 2f, 0f, z * 2f);
-                //blocks.add(floor);
+        for (int px = 0; px < 512; px++) {
+            for (int py = 0; py < 512; py++) {
+                float worldX = (px / 512f) * 40f - 21f;
+                float worldZ = (py / 512f) * 40f - 21f;
 
                 float lightIntensity = 0f;
+
+                int gridX = MathUtils.floor((worldX + 1f) / 2f) + 10;
+                int gridZ = MathUtils.floor((worldZ + 1f) / 2f) + 10;
 
                 for (int dx = -2; dx <= 2; dx++) {
                     for (int dz = -2; dz <= 2; dz++) {
                         int nx = gridX + dx;
                         int nz = gridZ + dz;
 
-                        if (isValidGrid(nx, nz) && solidGrid[nx][nz]) {
-                            float dist = (float)Math.sqrt(dx*dx + dz*dz);
-                            if (dist < 2.5f) {
-                                lightIntensity += (2.5f - dist) * 0.25f;
+                        if (nx >= 0 && nx < 20 && nz >= 0 && nz < 20 && solidGrid[nx][nz]) {
+                            float wallWorldX = (nx - 10) * 2f;
+                            float wallWorldZ = (nz - 10) * 2f;
+
+                            float dist = (float)Math.sqrt((worldX - wallWorldX)*(worldX - wallWorldX) + (worldZ - wallWorldZ)*(worldZ - wallWorldZ));
+                            if (dist < 3.0f) {
+                                float intensity = (3.0f - dist) / 2.0f;
+                                lightIntensity += intensity;
                             }
                         }
                     }
                 }
-
                 lightIntensity = MathUtils.clamp(lightIntensity, 0f, 1f);
 
-                if (lightIntensity > 0) {
-                    Color finalGlow = new Color(0f, 0f, 0f, 1f).lerp(floorGlowColor, lightIntensity);
-                    floor.materials.get(0).set(ColorAttribute.createEmissive(finalGlow));
-                }
+                float r = baseFloor.r + (glowColor.r - baseFloor.r) * lightIntensity;
+                float g = baseFloor.g + (glowColor.g - baseFloor.g) * lightIntensity;
+                float b = baseFloor.b + (glowColor.b - baseFloor.b) * lightIntensity;
 
-                blocks.add(floor);
+                lightmap.drawPixel(px, py, Color.rgba8888(r, g, b, 1f));
+            }
+        }
+
+        floorTexture = new Texture(lightmap);
+        floorTexture.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        lightmap.dispose();
+
+        Material floorMat = new Material(
+            TextureAttribute.createDiffuse(floorTexture),
+            TextureAttribute.createEmissive(floorTexture)
+        );
+
+        floorModel = modelBuilder.createRect(
+            -21f, 1f, -21f,
+            19f, 1f, -21f,
+            19f, 1f, 19f,
+            -21f, 1f, 19f,
+            0f, 1f, 0f,
+            floorMat,
+            Usage.Position | Usage.Normal | Usage.TextureCoordinates
+        );
+
+        ModelInstance giantFloor = new ModelInstance(floorModel);
+        blocks.add(giantFloor);
+
+        // Build walls
+        for (int x = -10; x < 10; x++) {
+            for (int z = -10; z < 10; z++) {
+                int gridX = x + 10;
+                int gridZ = z + 10;
 
                 if (solidGrid[gridX][gridZ]) {
                     ModelInstance wall = new ModelInstance(wallModel);
@@ -213,5 +250,6 @@ public class MapManager {
     public void dispose() {
         if (floorModel != null) floorModel.dispose();
         if (wallModel != null) wallModel.dispose();
+        if (floorTexture != null) floorTexture.dispose();
     }
 }
