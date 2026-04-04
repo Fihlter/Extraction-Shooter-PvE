@@ -61,6 +61,8 @@ public class MapManager {
             ),
             Usage.Position | Usage.Normal);
 
+        Color floorGlowColor = new Color(0.3f, 0.5f, 0.9f, 0.1f);
+
         for (int x = -10; x < 10; x++) {
             for (int z = -10; z < 10; z++) {
                 int gridX = x + 10;
@@ -68,6 +70,31 @@ public class MapManager {
 
                 ModelInstance floor = new ModelInstance(floorModel);
                 floor.transform.setToTranslation(x * 2f, 0f, z * 2f);
+                //blocks.add(floor);
+
+                float lightIntensity = 0f;
+
+                for (int dx = -2; dx <= 2; dx++) {
+                    for (int dz = -2; dz <= 2; dz++) {
+                        int nx = gridX + dx;
+                        int nz = gridZ + dz;
+
+                        if (isValidGrid(nx, nz) && solidGrid[nx][nz]) {
+                            float dist = (float)Math.sqrt(dx*dx + dz*dz);
+                            if (dist < 2.5f) {
+                                lightIntensity += (2.5f - dist) * 0.25f;
+                            }
+                        }
+                    }
+                }
+
+                lightIntensity = MathUtils.clamp(lightIntensity, 0f, 1f);
+
+                if (lightIntensity > 0) {
+                    Color finalGlow = new Color(0f, 0f, 0f, 1f).lerp(floorGlowColor, lightIntensity);
+                    floor.materials.get(0).set(ColorAttribute.createEmissive(finalGlow));
+                }
+
                 blocks.add(floor);
 
                 if (solidGrid[gridX][gridZ]) {
