@@ -13,14 +13,10 @@ import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
-import com.badlogic.gdx.graphics.g3d.attributes.FloatAttribute;
-import com.badlogic.gdx.graphics.g3d.loader.ObjLoader;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.math.collision.BoundingBox;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.graphics.g3d.environment.PointLight;
@@ -152,7 +148,7 @@ public class ExtractionGame extends ApplicationAdapter {
         // Create glowing hand
         Color handBlue = new Color(0.0f, 0.0f, 1.0f, 1f);
         Color glowBlue = new Color(0.6f, 0.8f, 1.0f, 1f);
-        handModel = modelBuilder.createBox(0.4f, 0.4f, 0.8f, // Dimensions: Width, Height, Length
+        handModel = modelBuilder.createBox(0.27f, 0.27f, 0.85f, // Dimensions: Width, Height, Length
                 new Material(
                     ColorAttribute.createDiffuse(handBlue),
                     ColorAttribute.createEmissive(glowBlue)
@@ -465,13 +461,19 @@ public class ExtractionGame extends ApplicationAdapter {
 
         swordInstance.transform.set(camera.view).inv();
 
-        float rightOffset = 0.5f;
-        float downOffset = -0.65f;
-        float forwardOffset = -0.6f;
+        float rightOffset = 0.25f;
+        float downOffset = -0.7f;
+        float forwardOffset = 0.1f;
         swordInstance.transform.translate(rightOffset, downOffset, forwardOffset);
 
-        swordInstance.transform.rotate(Vector3.Z, handTiltX * 2f);
-        swordInstance.transform.rotate(Vector3.X, handTiltY * 2f);
+        swordInstance.transform.rotate(Vector3.X, 20f);
+        swordInstance.transform.rotate(Vector3.Y, -16f);
+
+        swordInstance.transform.rotate(Vector3.Y, handTiltX * 2f);
+        swordInstance.transform.rotate(Vector3.Z, handTiltX * 1.5f);
+        swordInstance.transform.rotate(Vector3.X, handTiltY * 2.5f);
+
+        swordInstance.transform.translate(0, 0, -0.6f);
 
         swordInstance.transform.translate(0, 0, -localPlayer.attackOffset);
     }

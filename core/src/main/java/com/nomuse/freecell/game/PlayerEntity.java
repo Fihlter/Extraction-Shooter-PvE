@@ -30,7 +30,7 @@ public class PlayerEntity {
             attackTimer += deltaTime;
 
             float progress = attackTimer / ATTACK_DURATION;
-            attackOffset = MathUtils.sin(progress * MathUtils.PI) * 0.1f;
+            attackOffset = MathUtils.sin(progress * MathUtils.PI) * 0.255f;
 
             if (attackTimer >= ATTACK_DURATION) {
                 isAttacking = false;
