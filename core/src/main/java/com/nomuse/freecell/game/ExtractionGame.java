@@ -68,6 +68,10 @@ public class ExtractionGame extends ApplicationAdapter {
     private ModelInstance headBrush;
     private ModelInstance limbBrush;
 
+    // Projectile Visuals
+    private Model projectileModel;
+    private Array<ProjectileEntity> projectiles = new Array<>();
+
     // Pre-allocate colors
     private final Color baseTorsoColor = new Color(Color.DARK_GRAY);
     private final Color baseHeadColor = new Color(Color.DARK_GRAY);
@@ -88,6 +92,7 @@ public class ExtractionGame extends ApplicationAdapter {
     private Sound deathSound;
     private Sound swooshSound;
     private Sound playerHitSound;
+    private Sound playerShootSound;
     private float footstepTimer = 0f;
     private static final float FOOTSTEP_INTERVAL = 0.35f;
 
@@ -134,6 +139,7 @@ public class ExtractionGame extends ApplicationAdapter {
         deathSound = Gdx.audio.newSound(Gdx.files.internal("sounds/npc/npc_death.wav"));
         swooshSound = Gdx.audio.newSound(Gdx.files.internal("sounds/player/swoosh.wav"));
         playerHitSound = Gdx.audio.newSound(Gdx.files.internal("sounds/player/player_hit.wav"));
+        playerShootSound = Gdx.audio.newSound(Gdx.files.internal("sounds/player/player_shoot03.wav"));
 
         // Player lantern
         playerLight = new PointLight().set(0.7f, 0.8f, 1.0f, 0f, 0f, 0f, 12f);
@@ -141,9 +147,6 @@ public class ExtractionGame extends ApplicationAdapter {
 
         // --- SPAWN ENEMIES ---
         enemies = new Array<>();
-        // Spawn two enemies nearby
-        //enemies.add(new EnemyEntity(101, 4f, 3f, 4f));
-        //enemies.add(new EnemyEntity(102, -4f, 3f, 8f));
 
         // Create a 1x1x1 Red Cube to represent enemies
         enemyModel = modelBuilder.createBox(1f, 1f, 1f,
@@ -169,6 +172,15 @@ public class ExtractionGame extends ApplicationAdapter {
                 ),
                 Usage.Position | Usage.Normal);
         swordInstance = new ModelInstance(handModel);
+
+        // Create Projectile Model
+        Color projCyan = new Color(0.2f, 0.9f, 1.0f, 1f);
+        projectileModel = modelBuilder.createSphere(0.3f, 0.3f, 0.3f, 10, 10,
+            new Material(
+                ColorAttribute.createDiffuse(projCyan),
+                ColorAttribute.createEmissive(projCyan)
+            ),
+            Usage.Position | Usage.Normal);
 
         // Humanoid models
         // Torso
@@ -293,6 +305,19 @@ public class ExtractionGame extends ApplicationAdapter {
             }
         }
 
+        // Update Projectiles
+        for (int i = projectiles.size - 1; i >= 0; i--) {
+            ProjectileEntity proj = projectiles.get(i);
+            proj.update(delta, mapManager, enemies);
+
+            if (proj.isDead) {
+                for (int p = 0; p < 5; p++) {
+                    particles.add(new ParticleEntity(particleModel, proj.x, proj.y, proj.z));
+                }
+                projectiles.removeIndex(i);
+            }
+        }
+
         // Update particles
         for (int i = particles.size - 1; i >= 0; i--) {
             ParticleEntity p = particles.get(i);
@@ -346,15 +371,11 @@ public class ExtractionGame extends ApplicationAdapter {
         Gdx.gl.glBlendFunc(com.badlogic.gdx.graphics.GL20.GL_SRC_ALPHA, com.badlogic.gdx.graphics.GL20.GL_ONE_MINUS_SRC_ALPHA);
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-
         shapeRenderer.setColor(0.05f, 0.05f, 0.08f, 0.9f);
         shapeRenderer.rect(20, 20, 300, 25);
-
         float healthPercent = Math.max(0, (float)localPlayer.health / (float)localPlayer.maxHealth);
-
         shapeRenderer.setColor(0.2f, 0.8f, 1.0f, 1f);
         shapeRenderer.rect(22, 22, (300 - 4) * healthPercent, 25 - 4);
-
         shapeRenderer.end();
 
         Gdx.gl.glDisable(com.badlogic.gdx.graphics.GL20.GL_BLEND);
@@ -513,7 +534,7 @@ public class ExtractionGame extends ApplicationAdapter {
             enemies.add(new EnemyEntity(randomId, spawnX, spawnY, spawnZ));
         }
 
-        // Melee attack
+        // Melee attack (left click)
         if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) && !localPlayer.isAttacking) {
             localPlayer.isAttacking = true;
             localPlayer.attackTimer = 0f;
@@ -548,6 +569,25 @@ public class ExtractionGame extends ApplicationAdapter {
                 }
             }
         }
+
+        // Ranged attack (right click)
+        if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT) && !localPlayer.isShooting && !localPlayer.isAttacking) {
+            localPlayer.isShooting = true;
+            localPlayer.shootTimer = 0f;
+
+            if (playerShootSound != null) {
+                playerShootSound.play(0.8f, MathUtils.random(1.4f, 1.6f), 0f);
+            }
+
+            Vector3 shootDir = new Vector3(camera.direction).nor();
+
+            float spawnX = localPlayer.x + shootDir.x * 0.5f;
+            float spawnY = camera.position.y + shootDir.y * 0.5f;
+            float spawnZ = localPlayer.z + shootDir.z * 0.5f;
+
+            ModelInstance projInstance = new ModelInstance(projectileModel);
+            projectiles.add(new ProjectileEntity(projInstance, spawnX, spawnY, spawnZ, shootDir));
+        }
     }
 
     // -- UPDATING WEAPON/CAMERA --
@@ -579,11 +619,12 @@ public class ExtractionGame extends ApplicationAdapter {
         swordInstance.transform.rotate(Vector3.Z, handTiltX * 0.5f);
         swordInstance.transform.rotate(Vector3.X, handTiltY * 0.5f);
 
+        // Apply melee swings
         swordInstance.transform.rotate(Vector3.X, -localPlayer.attackOffset * 60f);
         swordInstance.transform.rotate(Vector3.Y, localPlayer.attackOffset * 30f);
         swordInstance.transform.rotate(Vector3.Z, localPlayer.attackOffset * 40f);
 
-        swordInstance.transform.translate(0, 0, -0.6f);
+        swordInstance.transform.translate(0, 0, -0.6f - localPlayer.shootOffset);
 
     }
 
@@ -636,6 +677,7 @@ public class ExtractionGame extends ApplicationAdapter {
         if (deathSound != null) deathSound.dispose();
         if (swooshSound != null) swooshSound.dispose();
         if (playerHitSound != null) playerHitSound.dispose();
+        if (playerShootSound != null) playerShootSound.dispose();
     }
 
     // Collect model garbage
@@ -643,6 +685,7 @@ public class ExtractionGame extends ApplicationAdapter {
         if (handModel != null) handModel.dispose();
         if (enemyModel != null) enemyModel.dispose();
         if (particleModel != null) particleModel.dispose();
+        if (projectileModel != null) projectileModel.dispose();
     }
 
     // Collect world garbage

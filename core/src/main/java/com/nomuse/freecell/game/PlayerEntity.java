@@ -14,6 +14,12 @@ public class PlayerEntity {
     public float attackOffset = 0f;
     public static final float ATTACK_DURATION = 0.35f;
 
+    // Shooting state
+    public boolean isShooting = false;
+    public float shootTimer = 0f;
+    public float shootOffset = 0f;
+    public static final float SHOOT_DURATION = 0.15f;
+
     public float maxHealth = 100f;
     public float health = 100f;
     
@@ -44,6 +50,7 @@ public class PlayerEntity {
             damageTimer -= deltaTime;
         }
 
+        // Update melee anim
         if (isAttacking) {
             attackTimer += deltaTime;
 
@@ -54,6 +61,19 @@ public class PlayerEntity {
                 isAttacking = false;
                 attackTimer = 0f;
                 attackOffset = 0f;
+            }
+        }
+
+        // Update shooting anim
+        if (isShooting) {
+            shootTimer += deltaTime;
+            float progress = shootTimer / SHOOT_DURATION;
+            shootOffset = MathUtils.sin(progress * MathUtils.PI) * 0.4f;
+
+            if (shootTimer >= SHOOT_DURATION) {
+                isShooting = false;
+                shootTimer = 0f;
+                shootOffset = 0f;
             }
         }
 
