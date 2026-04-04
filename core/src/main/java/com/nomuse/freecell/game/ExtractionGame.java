@@ -78,6 +78,7 @@ public class ExtractionGame extends ApplicationAdapter {
     private Sound hitSound;
     private Sound deathSound;
     private Sound swooshSound;
+    private Sound playerHitSound;
     private float footstepTimer = 0f;
     private static final float FOOTSTEP_INTERVAL = 0.35f;
 
@@ -123,6 +124,7 @@ public class ExtractionGame extends ApplicationAdapter {
         hitSound = Gdx.audio.newSound(Gdx.files.internal("sounds/npc/hit02.wav"));
         deathSound = Gdx.audio.newSound(Gdx.files.internal("sounds/npc/npc_death.wav"));
         swooshSound = Gdx.audio.newSound(Gdx.files.internal("sounds/player/swoosh.wav"));
+        playerHitSound = Gdx.audio.newSound(Gdx.files.internal("sounds/player/player_hit.wav"));
 
         // Player lantern
         playerLight = new PointLight().set(0.7f, 0.8f, 1.0f, 0f, 0f, 0f, 12f);
@@ -207,7 +209,7 @@ public class ExtractionGame extends ApplicationAdapter {
         if (localPlayer.justTookDamage) {
             localPlayer.justTookDamage = false;
             if (hitSound != null) {
-                hitSound.play(1.0f, MathUtils.random(0.6f, 0.8f), 0f);
+                playerHitSound.play(1.0f, MathUtils.random(0.6f, 0.8f), 0f);
             }
         }
 
@@ -280,16 +282,13 @@ public class ExtractionGame extends ApplicationAdapter {
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
-        float healthPercent = Math.max(0, localPlayer.health / localPlayer.maxHealth);
         shapeRenderer.setColor(0.05f, 0.05f, 0.08f, 0.9f);
         shapeRenderer.rect(20, 20, 300, 25);
 
-        if (localPlayer.damageTimer > 0) {
-            float alpha = localPlayer.damageTimer / 0.3f;
+        float healthPercent = Math.max(0, (float)localPlayer.health / (float)localPlayer.maxHealth);
 
-            shapeRenderer.setColor(0.2f, 0.8f, 1.0f, 1f);
-            shapeRenderer.rect(22, 22, (300 - 4) * healthPercent, 25 - 4);
-        }
+        shapeRenderer.setColor(0.2f, 0.8f, 1.0f, 1f);
+        shapeRenderer.rect(22, 22, (300 - 4) * healthPercent, 25 - 4);
 
         shapeRenderer.end();
 
@@ -547,6 +546,7 @@ public class ExtractionGame extends ApplicationAdapter {
         if (hitSound != null) hitSound.dispose();
         if (deathSound != null) deathSound.dispose();
         if (swooshSound != null) swooshSound.dispose();
+        if (playerHitSound != null) playerHitSound.dispose();
     }
 
     // Collect model garbage
