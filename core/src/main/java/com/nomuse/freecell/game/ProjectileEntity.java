@@ -39,7 +39,7 @@ public class ProjectileEntity {
         if (MathUtils.randomBoolean (0.6f)) {
             float px = x + MathUtils.random(-0.1f, 0.1f);
             float py = y + MathUtils.random(-0.1f, 0.1f);
-            float pz = y + MathUtils.random(-0.1f, 0.1f);
+            float pz = z + MathUtils.random(-0.1f, 0.1f);
             particles.add(new ParticleEntity(particleModel, px, py, pz, ParticleEntity.TYPE_TRAIL));
         }
 

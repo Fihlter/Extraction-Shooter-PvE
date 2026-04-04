@@ -49,11 +49,12 @@ public class ParticleEntity {
     public boolean update(float deltaTime) {
 
         if (type == TYPE_EXPLOSION) {
-            vx *= PlayerEntity.GRAVITY * deltaTime;
+            vy += PlayerEntity.GRAVITY * deltaTime;
             vx *= 0.98f;
             vz *= 0.98f;
         } else {
             vx *= 0.9f;
+            vy *= 0.9f;
             vz *= 0.9f;
         }
 
