@@ -140,7 +140,7 @@ public class ExtractionGame extends ApplicationAdapter {
         environment.add(playerLight);
 
         // --- SPAWN ENEMIES ---
-        //enemies = new Array<>();
+        enemies = new Array<>();
         // Spawn two enemies nearby
         //enemies.add(new EnemyEntity(101, 4f, 3f, 4f));
         //enemies.add(new EnemyEntity(102, -4f, 3f, 8f));
