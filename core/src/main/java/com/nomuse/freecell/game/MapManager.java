@@ -51,8 +51,8 @@ public class MapManager {
             new Material(ColorAttribute.createDiffuse(Color.FOREST)),
             Usage.Position | Usage.Normal);
 
-        Color softWhiteBlue = new Color(0.8f, 0.9f, 1.0f, 1f);
-        Color strongGlow = new Color(0.4f, 0.6f, 1.0f, 1f);
+        Color softWhiteBlue = new Color(0.7f, 0.9f, 1.0f, 1f);
+        Color strongGlow = new Color(0.9f, 0.95f, 1.0f, 1f);
 
         wallModel = modelBuilder.createBox(2f, 2f, 2f,
             new Material(

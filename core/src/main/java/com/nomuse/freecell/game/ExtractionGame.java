@@ -26,6 +26,9 @@ import com.badlogic.gdx.graphics.g3d.environment.PointLight;
 import com.crashinvaders.vfx.VfxManager;
 import com.crashinvaders.vfx.effects.BloomEffect;
 import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.glutils.FrameBuffer;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
 public class ExtractionGame extends ApplicationAdapter {
 
@@ -83,6 +86,11 @@ public class ExtractionGame extends ApplicationAdapter {
     // VFX
     private VfxManager vfxManager;
     private BloomEffect bloomEffect;
+
+    // Custom FBO
+    private FrameBuffer fbo;
+    private SpriteBatch spriteBatch;
+    private TextureRegion fboRegion;
 
     @Override
     public void create() {
@@ -173,9 +181,15 @@ public class ExtractionGame extends ApplicationAdapter {
         vfxManager = new VfxManager(Pixmap.Format.RGBA8888);
         bloomEffect = new BloomEffect();
 
-        bloomEffect.setBloomIntensity(1.5f);
-        bloomEffect.setThreshold(0.8f);
+        bloomEffect.setBloomIntensity(2.5f);
+        bloomEffect.setThreshold(0.45f);
         vfxManager.addEffect(bloomEffect);
+
+        // Create custom FrameBuffer
+        spriteBatch = new SpriteBatch();
+        fbo = new FrameBuffer(Pixmap.Format.RGBA8888, Gdx. graphics. getWidth(), Gdx.graphics.getHeight(), true);
+        fboRegion = new TextureRegion(fbo.getColorBufferTexture());
+        fboRegion.flip(false, true);
     }
 
     // -- HANDLE RENDERING --
@@ -185,7 +199,7 @@ public class ExtractionGame extends ApplicationAdapter {
 
         // Process Input
         handleInput(delta);
-        //localPlayer.update(delta);
+        localPlayer.update(delta);
 
         for (int i = 0; i < enemies.size; i++) {
             EnemyEntity enemy = enemies.get(i);
@@ -213,16 +227,12 @@ public class ExtractionGame extends ApplicationAdapter {
         // Update Camera
         updateCameraAndWeapon();
 
-        vfxManager.cleanUpBuffers();
-        vfxManager.beginInputCapture();
-
+        // Render 3D scene to custom FBO
+        fbo.begin();
         Gdx.gl.glClearColor(0.02f, 0.02f, 0.05f, 1f);
         Gdx.gl.glClear(com.badlogic.gdx. graphics.GL20.GL_COLOR_BUFFER_BIT | com.badlogic.gdx.graphics.GL20.GL_DEPTH_BUFFER_BIT);
 
-        //ScreenUtils.clear(0.02f, 0.02f, 0.05f, 1f, true);
-
         modelBatch.begin(camera);
-
         for (ModelInstance block : mapManager.blocks) {
             modelBatch.render(block, environment);
         }
@@ -234,8 +244,16 @@ public class ExtractionGame extends ApplicationAdapter {
         
         }
         modelBatch.render(swordInstance, environment);
-
         modelBatch.end();
+
+        fbo.end();
+
+        vfxManager.cleanUpBuffers();
+        vfxManager.beginInputCapture();
+
+        spriteBatch.begin();
+        spriteBatch.draw(fboRegion, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        spriteBatch.end();
 
         vfxManager.endInputCapture();
         vfxManager.applyEffects();
@@ -461,6 +479,14 @@ public class ExtractionGame extends ApplicationAdapter {
         if (vfxManager != null) {
             vfxManager.resize(width, height);
         }
+
+        if (fbo != null) {
+            fbo.dispose();
+        }
+        fbo = new FrameBuffer(Pixmap.Format.RGBA8888, width, height, true);
+        fboRegion = new TextureRegion(fbo.getColorBufferTexture());
+        fboRegion.flip(false, true);
+
         camera.viewportWidth = width;
         camera.viewportHeight = height;
         camera.update();
@@ -486,6 +512,8 @@ public class ExtractionGame extends ApplicationAdapter {
         if (mapManager != null) mapManager.dispose();
         if (vfxManager != null) vfxManager.dispose();
         if (bloomEffect != null) bloomEffect.dispose();
+        if (fbo != null) fbo.dispose();
+        if (spriteBatch != null) spriteBatch.dispose();
     }
 
     // -- GARBAGE COLLECTION --
