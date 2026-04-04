@@ -216,13 +216,23 @@ public class ExtractionGame extends ApplicationAdapter {
         vfxManager.cleanUpBuffers();
         vfxManager.beginInputCapture();
 
-        ScreenUtils.clear(0.02f, 0.02f, 0.05f, 1f, true);
+        Gdx.gl.glClearColor(0.02f, 0.02f, 0.05f, 1f);
+        Gdx.gl.glClear(com.badlogic.gdx. graphics.GL20.GL_COLOR_BUFFER_BIT | com.badlogic.gdx.graphics.GL20.GL_DEPTH_BUFFER_BIT);
+
+        //ScreenUtils.clear(0.02f, 0.02f, 0.05f, 1f, true);
 
         modelBatch.begin(camera);
 
-        for (ModelInstance block : mapManager.blocks) { modelBatch.render(block, environment); }
-        for (int i = 0; i < enemies.size; i++) { renderHumanoid(enemies.get(i), modelBatch, environment); }
-        for (int i = 0; i < particles.size; i++) { modelBatch.render(particles.get(i).instance, environment); }
+        for (ModelInstance block : mapManager.blocks) {
+            modelBatch.render(block, environment);
+        }
+        for (int i = 0; i < enemies.size; i++) {
+            renderHumanoid(enemies.get(i), modelBatch, environment);
+        }
+        for (int i = 0; i < particles.size; i++) {
+            modelBatch.render(particles.get(i).instance, environment);
+        
+        }
         modelBatch.render(swordInstance, environment);
 
         modelBatch.end();
