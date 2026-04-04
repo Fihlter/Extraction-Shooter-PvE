@@ -16,6 +16,9 @@ public class PlayerEntity {
 
     public float maxHealth = 100f;
     public float health = 100f;
+    
+    public float damageTimer = 0f;
+    public boolean justTookDamage = false;
 
     public float yVelocity = 0f;
     public boolean isGrounded = true;
@@ -28,7 +31,19 @@ public class PlayerEntity {
         this.id = id;
     }
 
+    public void takeDamage(float damageAmount) {
+        health -= damageAmount;
+        if (health < 0) health = 0;
+
+        damageTimer = 0.3f;
+        justTookDamage = true;
+    }
+
     public void update(float deltaTime) {
+        if (damageTimer > 0) {
+            damageTimer -= deltaTime;
+        }
+
         if (isAttacking) {
             attackTimer += deltaTime;
 

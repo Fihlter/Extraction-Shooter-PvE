@@ -204,6 +204,13 @@ public class ExtractionGame extends ApplicationAdapter {
         handleInput(delta);
         localPlayer.update(delta);
 
+        if (localPlayer.justTookDamage) {
+            localPlayer.justTookDamage = false;
+            if (hitSound != null) {
+                hitSound.play(1.0f, MathUtils.random(0.6f, 0.8f), 0f);
+            }
+        }
+
         for (int i = 0; i < enemies.size; i++) {
             EnemyEntity enemy = enemies.get(i);
             enemy.update(delta, players, mapManager, enemies);
@@ -266,17 +273,25 @@ public class ExtractionGame extends ApplicationAdapter {
         shapeRenderer.getProjectionMatrix().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         shapeRenderer.updateMatrices();
 
+        Gdx.gl.glEnable(com.badlogic.gdx.graphics.GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(com.badlogic.gdx.graphics.GL20.GL_SRC_ALPHA, com.badlogic.gdx.graphics.GL20.GL_ONE_MINUS_SRC_ALPHA);
+
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
 
+        float healthPercent = Math.max(0, localPlayer.health / localPlayer.maxHealth);
         shapeRenderer.setColor(0.05f, 0.05f, 0.08f, 0.9f);
         shapeRenderer.rect(20, 20, 300, 25);
 
-        float healthPercent = Math.max(0, localPlayer.health / localPlayer.maxHealth);
+        if (localPlayer.damageTimer > 0) {
+            float alpha = localPlayer.damageTimer / 0.3f;
 
-        shapeRenderer.setColor(0.2f, 0.8f, 1.0f, 1f);
-        shapeRenderer.rect(22, 22, (300 - 4) * healthPercent, 25 - 4);
+            shapeRenderer.setColor(0.2f, 0.8f, 1.0f, 1f);
+            shapeRenderer.rect(22, 22, (300 - 4) * healthPercent, 25 - 4);
+        }
 
         shapeRenderer.end();
+
+        Gdx.gl.glDisable(com.badlogic.gdx.graphics.GL20.GL_BLEND);
 
         // Press ESC to release mouse cursor
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {

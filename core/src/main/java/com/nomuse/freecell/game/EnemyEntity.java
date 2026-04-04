@@ -24,6 +24,11 @@ public class EnemyEntity {
     public float aggroRange = 15f;
     public float health = 100f;
 
+    // Enemy attack stats
+    public float attackCooldown = 0f;
+    public static final float ATTACK_RATE = 1.5f;
+    public float attackDamage = 15f;
+
     // Hit detection vars
     public float damageTimer = 0f;
     public static final float DAMAGE_DURATION = 0.5f;
@@ -53,6 +58,10 @@ public class EnemyEntity {
 
     // Server-side Sim Logic
     public void update(float deltaTime, Array<PlayerEntity> players, MapManager mapManager, Array<EnemyEntity> allEnemies) {
+
+        if (attackCooldown > 0) {
+            attackCooldown -= deltaTime;
+        }
 
         if (damageTimer > 0) {
             damageTimer -= deltaTime;
@@ -147,6 +156,13 @@ public class EnemyEntity {
                 }
             } else {
                 currentPath.clear();
+            }
+
+            if (distanceToPlayer <= 1.5f) {
+                if (attackCooldown <= 0f) {
+                    closestPlayer.takeDamage(attackDamage);
+                    attackCooldown = ATTACK_RATE;
+                }
             }
         }
 
