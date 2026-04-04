@@ -31,76 +31,46 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 
 public class ExtractionGame extends ApplicationAdapter {
 
-    private float handTiltX = 0f;
-    private float handTiltY = 0f;
-
-    private final Vector3 tmpForward = new Vector3();
-    private final Vector3 tmpRight = new Vector3();
-    private final Matrix4 tmpMatrix = new Matrix4();
+    // Sub-systems
+    private EntityManager entityManager;
+    private PlayerController playerController;
+    private MapManager mapManager;
 
     // State machine
     public enum GameState { LOBBY, PLAYING }
     public GameState currentState = GameState.LOBBY;
 
-    // UI elements
+    private final Matrix4 tmpMatrix = new Matrix4();
+
+    // Graphics & assets
     private BitmapFont font;
     private ModelBuilder modelBuilder;
-    
     private PerspectiveCamera camera;
     private ModelBatch modelBatch;
     private Environment environment;
-    private MapManager mapManager;
     private PointLight playerLight;
 
-    //private ModelBatch shadowBatch;
-    //private DirectionalShadowLight shadowLight;
+    // Player/Network Array
+    private Array<PlayerEntity> players = new Array<>();
 
-    // Network player state
-    private PlayerEntity localPlayer;
-    private Array<PlayerEntity> players;
-    private float moveSpeed = 4f;
-    private float mouseSensitivity = 0.2f;
+    // Visuals and brushes
+    private Model handModel, projectileModel, particleModel, enemyModel;
+    private ModelInstance swordInstance, torsoBrush, headBrush, limbBrush;
 
-    // Visuals
-    private Model handModel;
-    private ModelInstance swordInstance;
-    private ModelInstance torsoBrush;
-    private ModelInstance headBrush;
-    private ModelInstance limbBrush;
-
-    // Projectile Visuals
-    private Model projectileModel;
-    private Array<ProjectileEntity> projectiles = new Array<>();
-
-    // Pre-allocate colors
-    private final Color baseTorsoColor = new Color(Color.DARK_GRAY);
-    private final Color baseHeadColor = new Color(Color.DARK_GRAY);
-    private final Color baseLimbColor = new Color(Color.DARK_GRAY);
     private final Color hitColor = new Color(Color.RED);
     private final Color workingColor = new Color();
 
-    // Enemy vars
-    private Array<EnemyEntity> enemies;
-    private Array<ParticleEntity> particles = new Array<>();
-    private Model particleModel;
-    private Model enemyModel;
-    private ModelInstance enemyBrush;
-
-    // Audio state
+    // Audio
     private Sound footstepSound;
     private Sound hitSound;
     private Sound deathSound;
     private Sound swooshSound;
     private Sound playerHitSound;
     private Sound playerShootSound;
-    private float footstepTimer = 0f;
-    private static final float FOOTSTEP_INTERVAL = 0.35f;
 
-    // VFX
+    // VFX and HUD
     private VfxManager vfxManager;
     private BloomEffect bloomEffect;
-
-    // Custom FBO
     private FrameBuffer fbo;
     private SpriteBatch spriteBatch;
     private TextureRegion fboRegion;
@@ -108,115 +78,68 @@ public class ExtractionGame extends ApplicationAdapter {
 
     @Override
     public void create() {
-
-        //mapManager = new MapManager();
-
-        //localPlayer = new PlayerEntity(1);
-
-        players = new Array<>();
-        players.add(localPlayer);
+        entityManager = new EntityManager();
+        playerController = new PlayerController();
 
         camera = new PerspectiveCamera(90, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         camera.near = 0.1f;
         camera.far = 300f;
 
-        Gdx.input.setCursorCatched(true);
-
         modelBatch = new ModelBatch();
-        //shadowBatch = new ModelBatch(new DepthShaderProvider());
-
         modelBuilder = new ModelBuilder();
         font = new BitmapFont();
+        
+        setupEnvironment();
+        loadAudio();
+        createModels();
+        setupVFX();
 
-        // Setup environment
+        // Pass dependencies to subsystems
+        entityManager.init(particleModel, deathSound);
+    }
+
+    private void setupEnvironment() {
         environment = new Environment();
         environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.05f, 0.05f, 0.08f, 1f));
         environment.add(new com.badlogic.gdx.graphics.g3d.environment.DirectionalLight().set(0.05f, 0.05f, 0.1f, -1f, -0.8f, -0.2f));
-        
-        // Setup sounds
+
+        playerLight = new PointLight().set(0.7f, 0.8f, 1.0f, 0f, 0f, 0f, 9f);
+        environment.add(playerLight);
+    }
+
+    private void loadAudio() {
         footstepSound = Gdx.audio.newSound(Gdx.files.internal("sounds/footsteps/footstep01.ogg"));
         hitSound = Gdx.audio.newSound(Gdx.files.internal("sounds/npc/hit02.wav"));
         deathSound = Gdx.audio.newSound(Gdx.files.internal("sounds/npc/npc_death.wav"));
         swooshSound = Gdx.audio.newSound(Gdx.files.internal("sounds/player/swoosh.wav"));
         playerHitSound = Gdx.audio.newSound(Gdx.files.internal("sounds/player/player_hit.wav"));
         playerShootSound = Gdx.audio.newSound(Gdx.files.internal("sounds/player/player_shoot03.wav"));
+    }
 
-        // Player lantern
-        playerLight = new PointLight().set(0.7f, 0.8f, 1.0f, 0f, 0f, 0f, 12f);
-        environment.add(playerLight);
-
-        // --- SPAWN ENEMIES ---
-        enemies = new Array<>();
-
-        // Create a 1x1x1 Red Cube to represent enemies
-        enemyModel = modelBuilder.createBox(1f, 1f, 1f,
-                new Material(ColorAttribute.createDiffuse(Color.FIREBRICK)),
-                VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
-        enemyBrush = new ModelInstance(enemyModel);
-
-        // Initialize particle model
-        Color hotSpark = new Color(1.0f, 0.7f, 0.2f, 1f);
-
-        particleModel = modelBuilder.createBox(1f, 1f, 1f,
-            new Material(ColorAttribute.createDiffuse(Color.FIREBRICK),
-                        ColorAttribute.createEmissive(hotSpark)),
-            VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
-
-        // Create glowing hand
-        Color handBlue = new Color(0.0f, 0.0f, 1.0f, 1f);
-        Color glowBlue = new Color(0.6f, 0.8f, 1.0f, 1f);
-        handModel = modelBuilder.createBox(0.27f, 0.27f, 0.85f, // Dimensions: Width, Height, Length
-                new Material(
-                    ColorAttribute.createDiffuse(handBlue),
-                    ColorAttribute.createEmissive(glowBlue)
-                ),
-                Usage.Position | Usage.Normal);
-        swordInstance = new ModelInstance(handModel);
-
-        // Create Projectile Model
-        Color projCyan = new Color(0.2f, 0.9f, 1.0f, 1f);
-        Color projGlow = new Color(0.6f, 0.95f, 1.0f, 1f);
-        projectileModel = modelBuilder.createSphere(0.3f, 0.3f, 0.3f, 10, 10,
-            new Material(
-                ColorAttribute.createDiffuse(projCyan),
-                ColorAttribute.createEmissive(projGlow)
-            ),
-            Usage.Position | Usage.Normal);
-
-        // Humanoid models
-        // Torso
-        Model torsoModel = modelBuilder.createBox(0.4f, 0.6f, 0.4f,
-            new Material(ColorAttribute.createDiffuse(Color.DARK_GRAY)),
-            VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
-        // Head
-        Model headModel = modelBuilder.createBox(0.4f, 0.4f, 0.4f,
-            new Material(ColorAttribute.createDiffuse(Color.MAROON)),
-            VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
-        // Limb
-        Model limbModel = modelBuilder.createBox(0.2f, 0.6f, 0.2f,
-            new Material(ColorAttribute.createDiffuse(Color.FIREBRICK)),
-            VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
+    private void createModels() {
+        particleModel = modelBuilder.createBox(1f, 1f, 1f, new Material(ColorAttribute.createDiffuse(Color.FIREBRICK), ColorAttribute.createEmissive(new Color(1.0f, 0.7f, 0.2f, 1f))), Usage.Position | Usage.Normal);
+        enemyModel = modelBuilder.createBox(1f, 1f, 1f, new Material(ColorAttribute.createDiffuse(Color.FIREBRICK)), Usage.Position | Usage.Normal);
+        projectileModel = modelBuilder.createSphere(0.3f, 0.3f, 0.3f, 10, 10, new Material(ColorAttribute.createDiffuse(new Color(0.2f, 0.9f, 1.0f, 1f)), ColorAttribute.createEmissive(new Color(0.6f, 0.95f, 1.0f, 1f))), Usage.Position | Usage.Normal);
+        handModel = modelBuilder.createBox(0.27f, 0.27f, 0.85f, new Material(ColorAttribute.createDiffuse(new Color(0.0f, 0.0f, 1.0f, 1f)), ColorAttribute.createEmissive(new Color(0.6f, 0.8f, 1.0f, 1f))), Usage.Position | Usage.Normal);
         
-        // Create instances
-        torsoBrush = new ModelInstance(torsoModel);
-        headBrush = new ModelInstance(headModel);
-        limbBrush = new ModelInstance(limbModel);
+        swordInstance = new ModelInstance(handModel);
+        torsoBrush = new ModelInstance(modelBuilder.createBox(0.4f, 0.6f, 0.4f, new Material(ColorAttribute.createDiffuse(Color.DARK_GRAY)), Usage.Position | Usage.Normal));
+        headBrush = new ModelInstance(modelBuilder.createBox(0.4f, 0.4f, 0.4f, new Material(ColorAttribute.createDiffuse(Color.MAROON)), Usage.Position | Usage.Normal));
+        limbBrush = new ModelInstance(modelBuilder.createBox(0.2f, 0.6f, 0.2f, new Material(ColorAttribute.createDiffuse(Color.FIREBRICK)), Usage.Position | Usage.Normal));
+    }
 
-        // Post-processing pipeline
+    private void setupVFX() {
         vfxManager = new VfxManager(Pixmap.Format.RGBA8888);
         bloomEffect = new BloomEffect();
-
         bloomEffect.setBloomIntensity(2.0f);
         bloomEffect.setThreshold(0.45f);
         vfxManager.addEffect(bloomEffect);
 
-        // Create custom FrameBuffer
         spriteBatch = new SpriteBatch();
-        fbo = new FrameBuffer(Pixmap.Format.RGBA8888, Gdx. graphics. getWidth(), Gdx.graphics.getHeight(), true);
+        shapeRenderer = new ShapeRenderer();
+        fbo = new FrameBuffer(Pixmap.Format.RGBA8888, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), true);
         fboRegion = new TextureRegion(fbo.getColorBufferTexture());
         fboRegion.flip(false, true);
-
-        shapeRenderer = new ShapeRenderer();
     }
 
     @Override
@@ -228,431 +151,12 @@ public class ExtractionGame extends ApplicationAdapter {
         }
     }
 
-    private void renderLobby() {
-        com.badlogic.gdx.utils.ScreenUtils.clear(0.05f, 0.05f, 0.08f, 1f, true);
-
-        if (Gdx.input.isCursorCatched()) {
-            Gdx.input.setCursorCatched(false);
-        }
-
-        shapeRenderer.getProjectionMatrix().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        shapeRenderer.updateMatrices();
-        Gdx.gl.glDisable(com.badlogic.gdx.graphics.GL20.GL_DEPTH_TEST);
-
-        float btnWidth = 250;
-        float btnHeight = 60;
-        float btnX = (Gdx.graphics.getWidth() - btnWidth) / 2f;
-        float btnY = (Gdx.graphics.getHeight() - btnHeight) / 2f;
-
-        float mouseX = Gdx.input.getX();
-        float mouseY = Gdx.graphics.getHeight() - Gdx.input.getY();
-        boolean isHovering = mouseX >= btnY && mouseX <= btnX + btnWidth &&
-                            mouseY >= btnY && mouseY <= btnY + btnHeight;
-
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        if (isHovering) {
-            shapeRenderer.setColor(0.2f, 0.8f, 1.0f, 1f); // Bright neon cyan
-            if (Gdx.input.isButtonJustPressed(com.badlogic.gdx.Input.Buttons.LEFT)) {
-                startGame();
-            }
-        } else {
-            shapeRenderer.setColor(0.1f, 0.4f, 0.6f, 1f); // Idle dark cyan
-        }
-
-        shapeRenderer.rect(btnX, btnY, btnWidth, btnHeight);
-        shapeRenderer.end();
-
-        spriteBatch.getProjectionMatrix().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        spriteBatch.begin();
-        font.getData().setScale(1.5f);
-        font.setColor(com.badlogic.gdx.graphics.Color.WHITE);
-        font.draw(spriteBatch, "ENTER GRID", btnX + 50, btnY + 40);
-        spriteBatch.end();
-    }
-
-    // -- HANDLE RENDERING --
-    private void renderGame() {
-        float delta = Gdx.graphics.getDeltaTime();
-
-        // Process Input
-        handleInput(delta);
-        localPlayer.update(delta);
-
-        if (localPlayer.health <= 0) {
-            // TODO: Check if squadmates are alive before kicking to lobby
-            currentState = GameState.LOBBY;
-            return;
-        }
-
-        if (localPlayer.justTookDamage) {
-            localPlayer.justTookDamage = false;
-            if (hitSound != null) {
-                playerHitSound.play(1.0f, MathUtils.random(0.6f, 0.8f), 0f);
-            }
-        }
-
-        for (int i = 0; i < enemies.size; i++) {
-            EnemyEntity enemy = enemies.get(i);
-            enemy.update(delta, players, mapManager, enemies);
-
-            if (enemy.health <= 0) {
-                if (deathSound != null) deathSound.play(1.0f, MathUtils.random(0.85f, 1.15f), 0f);
-
-                for (int p = 0; p < 50; p++) {
-                    particles.add(new ParticleEntity(particleModel, enemy.x, enemy.y + 0.5f, enemy.z));
-                }
-
-                enemies.removeIndex(i);
-            }
-        }
-
-        // Update Projectiles
-        for (int i = projectiles.size - 1; i >= 0; i--) {
-            ProjectileEntity proj = projectiles.get(i);
-            proj.update(delta, mapManager, enemies, particles, particleModel);
-
-            if (proj.isDead) {
-                for (int p = 0; p < 5; p++) {
-                    particles.add(new ParticleEntity(particleModel, proj.x, proj.y, proj.z));
-                }
-                projectiles.removeIndex(i);
-            }
-        }
-
-        // Update particles
-        for (int i = particles.size - 1; i >= 0; i--) {
-            ParticleEntity p = particles.get(i);
-            if (p.update(delta)) {
-                particles.removeIndex(i);
-            }
-        }
-
-        // Update Camera
-        updateCameraAndWeapon();
-
-        // Render 3D scene to custom FBO
-        fbo.begin();
-        Gdx.gl.glClearColor(0.02f, 0.02f, 0.05f, 1f);
-        Gdx.gl.glClear(com.badlogic.gdx. graphics.GL20.GL_COLOR_BUFFER_BIT | com.badlogic.gdx.graphics.GL20.GL_DEPTH_BUFFER_BIT);
-
-        modelBatch.begin(camera);
-        for (ModelInstance block : mapManager.blocks) {
-            modelBatch.render(block, environment);
-        }
-        for (int i = 0; i < enemies.size; i++) {
-            renderHumanoid(enemies.get(i), modelBatch, environment);
-        }
-        for (int i = 0; i < particles.size; i++) {
-            modelBatch.render(particles.get(i).instance, environment);
-        
-        }
-        modelBatch.render(swordInstance, environment);
-        modelBatch.end();
-
-        fbo.end();
-
-        vfxManager.cleanUpBuffers();
-        vfxManager.beginInputCapture();
-
-        spriteBatch.begin();
-        spriteBatch.draw(fboRegion, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        spriteBatch.end();
-
-        vfxManager.endInputCapture();
-        vfxManager.applyEffects();
-        vfxManager.renderToScreen();
-
-        // Render HUD
-        shapeRenderer.getProjectionMatrix().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        shapeRenderer.updateMatrices();
-
-        Gdx.gl.glDisable(com.badlogic.gdx.graphics.GL20.GL_DEPTH_TEST);
-
-        Gdx.gl.glEnable(com.badlogic.gdx.graphics.GL20.GL_BLEND);
-        Gdx.gl.glBlendFunc(com.badlogic.gdx.graphics.GL20.GL_SRC_ALPHA, com.badlogic.gdx.graphics.GL20.GL_ONE_MINUS_SRC_ALPHA);
-
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.setColor(0.05f, 0.05f, 0.08f, 0.9f);
-        shapeRenderer.rect(20, 20, 300, 25);
-        float healthPercent = Math.max(0, (float)localPlayer.health / (float)localPlayer.maxHealth);
-        shapeRenderer.setColor(0.2f, 0.8f, 1.0f, 1f);
-        shapeRenderer.rect(22, 22, (300 - 4) * healthPercent, 25 - 4);
-        shapeRenderer.end();
-
-        Gdx.gl.glDisable(com.badlogic.gdx.graphics.GL20.GL_BLEND);
-
-        // Press ESC to release mouse cursor
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
-            Gdx.input.setCursorCatched(!Gdx.input.isCursorCatched());
-        }
-    }
-
-    // -- RENDER HUMANOID ENEMY --
-    private void renderHumanoid(EnemyEntity enemy, ModelBatch batch, Environment env) {
-        float ex = enemy.x;
-        float ey = enemy.y;
-        float ez = enemy.z;
-
-        // Calculate damage glow
-        float flashAmount = 0f;
-        if (enemy.damageTimer > 0) {
-            flashAmount = MathUtils.sin((enemy.damageTimer / EnemyEntity.DAMAGE_DURATION) * MathUtils.PI);
-        }
-
-        // Move enemy's world position
-        tmpMatrix.idt().translate(ex, ey, ez).rotate(Vector3.Y, enemy.rotation);
-
-        // Torso
-        workingColor.set(baseTorsoColor).lerp(hitColor, flashAmount);
-        ((ColorAttribute)torsoBrush.materials.get(0).get(ColorAttribute.Diffuse)).color.set(workingColor);
-        torsoBrush.transform.set(tmpMatrix);
-        if (env == null) {
-            batch.render(torsoBrush);
-        } else {
-            batch.render(torsoBrush, env);
-        }
-
-        // Head
-        workingColor.set(baseHeadColor).lerp(hitColor, flashAmount);
-        ((ColorAttribute)headBrush.materials.get(0).get(ColorAttribute.Diffuse)).color.set(workingColor);
-        headBrush.transform.set(tmpMatrix).translate(0, 0.5f, 0);
-        if (env == null) {
-            batch.render(headBrush);
-        } else {
-            batch.render(headBrush, env);
-        }
-
-        // Legs
-        workingColor.set(baseLimbColor).lerp(hitColor, flashAmount);
-        ((ColorAttribute)limbBrush.materials.get(0).get(ColorAttribute.Diffuse)).color.set(workingColor);
-        limbBrush.transform.set(tmpMatrix).translate(-0.1f, -0.6f, 0);
-        if (env == null) {
-            batch.render(limbBrush);
-        } else {
-            batch.render(limbBrush, env);
-        }
-        limbBrush.transform.set(tmpMatrix).translate(0.1f, -0.6f, 0);
-        if (env == null) {
-            batch.render(limbBrush);
-        } else {
-            batch.render(limbBrush, env);
-        }
-        
-        // Arms
-        limbBrush.transform.set(tmpMatrix).translate(-0.3f, 0, 0);
-        if (env == null) {
-            batch.render(limbBrush);
-        } else {
-            batch.render(limbBrush, env);
-        }
-        limbBrush.transform.set(tmpMatrix).translate(0.3f, 0, 0);
-        if (env == null) {
-            batch.render(limbBrush);
-        } else {
-            batch.render(limbBrush, env);
-        }
-  
-        batch.flush();
-    }   
-
-    // -- INPUT HANDLING --
-    private void handleInput(float deltaTime) {
-        if (!Gdx.input.isCursorCatched()) return;
-
-        float deltaX = -Gdx.input.getDeltaX() * mouseSensitivity;
-        float deltaY = -Gdx.input.getDeltaY() * mouseSensitivity;
-
-        handTiltX += deltaX * 0.5f;
-        handTiltY += deltaY * 0.5f;
-
-        localPlayer.yaw += deltaX;
-        localPlayer.pitch += deltaY;
-        localPlayer.pitch = MathUtils.clamp(localPlayer.pitch, -89f, 89f);
-
-        tmpForward.set((float)Math.sin(Math.toRadians(localPlayer.yaw)), 0, (float)Math.cos(Math.toRadians(localPlayer.yaw))).nor();
-        tmpRight.set(tmpForward).crs(Vector3.Y).nor();
-
-        float dx = 0;
-        float dz = 0;
-
-        if (Gdx.input.isKeyPressed(Input.Keys.W)) {
-            dx -= tmpForward.x * moveSpeed * deltaTime;
-            dz -= tmpForward.z * moveSpeed * deltaTime;
-        }
-        if (Gdx.input.isKeyPressed(Input.Keys.S)) {
-            dx += tmpForward.x * moveSpeed * deltaTime;
-            dz += tmpForward.z * moveSpeed * deltaTime;
-        }
-        if (Gdx.input.isKeyPressed(Input.Keys.A)) {
-            dx += tmpRight.x * moveSpeed * deltaTime;
-            dz += tmpRight.z * moveSpeed * deltaTime;
-        }
-        if (Gdx.input.isKeyPressed(Input.Keys.D)) {
-            dx -= tmpRight.x * moveSpeed * deltaTime;
-            dz -= tmpRight.z * moveSpeed * deltaTime;
-        }
-
-        float playerRadius = 0.4f;
-
-        if (!mapManager.isColliding(localPlayer.x + dx, localPlayer.z, playerRadius)) {
-            localPlayer.x += dx;
-        }
-
-        if (!mapManager.isColliding(localPlayer.x, localPlayer.z + dz, playerRadius)) {
-            localPlayer.z += dz;
-        }
-
-        // Footstep logic
-        boolean isMoving =  Gdx.input.isKeyPressed(Input.Keys.W) ||
-                            Gdx.input.isKeyPressed(Input.Keys.S) ||
-                            Gdx.input.isKeyPressed(Input.Keys.A) ||
-                            Gdx.input.isKeyPressed(Input.Keys.D);
-
-        if (isMoving && localPlayer.isGrounded) {
-            if (footstepTimer >= FOOTSTEP_INTERVAL) {
-                footstepSound.play(1.0f, MathUtils.random(0.85f, 1.15f), 0f);
-                footstepTimer = 0f;
-            }
-            footstepTimer += deltaTime;
-        } else if (!isMoving && localPlayer.isGrounded) {
-            footstepTimer = FOOTSTEP_INTERVAL;
-        }
-        
-        // Jumping
-        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) && localPlayer.isGrounded) {
-            localPlayer.yVelocity = PlayerEntity.JUMP_FORCE;
-            localPlayer.isGrounded = false;
-        }
-
-        // Spawn Enemy
-        if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
-            float spawnX = localPlayer.x - (tmpForward.x * 3f);
-            float spawnZ = localPlayer.z - (tmpForward.z * 3f);
-            float spawnY = 3f;
-
-            int randomId = MathUtils.random(1000, 9999);
-
-            enemies.add(new EnemyEntity(randomId, spawnX, spawnY, spawnZ));
-        }
-
-        // Melee attack (left click)
-        if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) && !localPlayer.isAttacking) {
-            localPlayer.isAttacking = true;
-            localPlayer.attackTimer = 0f;
-
-            if (swooshSound != null) {
-                swooshSound.play(1.0f, MathUtils.random(0.85f, 1.15f), 0f);
-            }
-
-            // Hit detection cone
-            float hitRange = 2.0f;
-            float lookX = -tmpForward.x;
-            float lookZ = -tmpForward.z;
-
-            for (int i = 0; i < enemies.size; i++) {
-                EnemyEntity enemy = enemies.get(i);
-
-                float eDx = enemy.x - localPlayer.x;
-                float eDz = enemy.z - localPlayer.z;
-                float dist = (float) Math.sqrt(eDx * eDx + eDz * eDz);
-
-                if (dist < hitRange) {
-                    float dirX = eDx / dist;
-                    float dirZ = eDz / dist;
-
-                    float dotProduct = (lookX * dirX) + (lookZ * dirZ);
-
-                    if (dotProduct > 0.5f) {
-                        enemy.takeHit(localPlayer.x, localPlayer.z, 35f);
-                        // Play hit sound
-                        hitSound.play(1.0f, MathUtils.random(0.9f, 1.1f), 0f);
-                    }
-                }
-            }
-        }
-
-        // Ranged attack (right click)
-        if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT) && !localPlayer.isShooting && !localPlayer.isAttacking) {
-            localPlayer.isShooting = true;
-            localPlayer.shootTimer = 0f;
-
-            if (playerShootSound != null) {
-                playerShootSound.play(0.8f, MathUtils.random(1.4f, 1.6f), 0f);
-            }
-
-            Vector3 shootDir = new Vector3(camera.direction).nor();
-            Vector3 rightDir = new Vector3(shootDir).crs(Vector3.Y).nor();
-
-            float spawnX = localPlayer.x + (shootDir.x * 0.8f) + (rightDir.x * 0.25f);
-            float spawnY = camera.position.y + (shootDir.y * 0.8f) - 0.25f;
-            float spawnZ = localPlayer.z + (shootDir.z * 0.8f) + (rightDir.z * 0.25f);
-
-            ModelInstance projInstance = new ModelInstance(projectileModel);
-            projectiles.add(new ProjectileEntity(projInstance, spawnX, spawnY, spawnZ, shootDir));
-        }
-    }
-
-    // -- UPDATING WEAPON/CAMERA --
-    private void updateCameraAndWeapon() {
-        float delta = Gdx.graphics.getDeltaTime();
-
-        camera.position.set(localPlayer.x, localPlayer.y, localPlayer.z);
-        playerLight.position.set(camera.position);
-        camera.direction.set(0, 0, -1);
-        camera.up.set(Vector3.Y);
-        camera.direction.rotate(Vector3.X, localPlayer.pitch);
-        camera.direction.rotate(Vector3.Y, localPlayer.yaw);
-        camera.update();
-
-        handTiltX = MathUtils.lerp(handTiltX, 0, 10f * delta);
-        handTiltY = MathUtils.lerp(handTiltY, 0, 10f * delta);
-
-        swordInstance.transform.set(camera.view).inv();
-
-        float rightOffset = 0.25f;
-        float downOffset = -0.7f;
-        float forwardOffset = 0.1f;
-        swordInstance.transform.translate(rightOffset, downOffset, forwardOffset);
-
-        swordInstance.transform.rotate(Vector3.X, 20f);
-        swordInstance.transform.rotate(Vector3.Y, -16f);
-
-        swordInstance.transform.rotate(Vector3.Y, handTiltX * 0.5f);
-        swordInstance.transform.rotate(Vector3.Z, handTiltX * 0.5f);
-        swordInstance.transform.rotate(Vector3.X, handTiltY * 0.5f);
-
-        // Apply melee swings
-        swordInstance.transform.rotate(Vector3.X, -localPlayer.attackOffset * 60f);
-        swordInstance.transform.rotate(Vector3.Y, localPlayer.attackOffset * 30f);
-        swordInstance.transform.rotate(Vector3.Z, localPlayer.attackOffset * 40f);
-
-        swordInstance.transform.translate(0, 0, -0.6f - localPlayer.shootOffset);
-
-    }
-
-    @Override
-    public void resize(int width, int height) {
-        if (vfxManager != null) {
-            vfxManager.resize(width, height);
-        }
-
-        if (fbo != null) {
-            fbo.dispose();
-        }
-        fbo = new FrameBuffer(Pixmap.Format.RGBA8888, width, height, true);
-        fboRegion = new TextureRegion(fbo.getColorBufferTexture());
-        fboRegion.flip(false, true);
-
-        camera.viewportWidth = width;
-        camera.viewportHeight = height;
-        camera.update();
-    }
-
+    // -- START GAME --
     private void startGame() {
         currentState = GameState.PLAYING;
         Gdx.input.setCursorCatched(true);
 
-        localPlayer = new PlayerEntity(1);
+        PlayerEntity localPlayer = new PlayerEntity(1);
         players.clear();
         players.add(localPlayer);
 
@@ -660,38 +164,154 @@ public class ExtractionGame extends ApplicationAdapter {
         mapManager = new MapManager();
         mapManager.buildVisuals(modelBuilder);
 
-        enemies.clear();
-        for (int i = 0; i < 5; i++) {
-
-            float spawnX = com.badlogic.gdx.math.MathUtils.random(-15f, 15f);
-            float spawnZ = com.badlogic.gdx.math.MathUtils.random(-15f, 15f);
-            EnemyEntity enemy = new EnemyEntity(i, spawnX, 1.6f, spawnZ);
-            enemies.add(enemy);
+        entityManager.clearAll();
+        for(int i = 0; i < 5; i++) {
+            entityManager.spawnEnemy(MathUtils.random(-15f, 15f), 1.6f, MathUtils.random(-15f, 15f));
         }
 
-        particles.clear();
+        // Link player controller
+        playerController.localPlayer = localPlayer;
+        playerController.camera = camera;
+        playerController.playerLight = playerLight;
+        playerController.swordInstance = swordInstance;
+        playerController.mapManager = mapManager;
+        playerController.entityManager = entityManager;
+        playerController.projectileModel = projectileModel;
+        playerController.footstepSound = footstepSound;
+        playerController.hitSound = hitSound;
+        playerController.swooshSound = swooshSound;
+        playerController.playerShootSound = playerShootSound;
     }
 
-    // Collect sound garbage
-    private void disposeSounds() {
-        if (footstepSound != null) footstepSound.dispose();
-        if (hitSound != null) hitSound.dispose();
-        if (deathSound != null) deathSound.dispose();
-        if (swooshSound != null) swooshSound.dispose();
-        if (playerHitSound != null) playerHitSound.dispose();
-        if (playerShootSound != null) playerShootSound.dispose();
+    // -- RENDER GAME --
+    private void renderGame() {
+        float delta = Gdx.graphics.getDeltaTime();
+
+        playerController.update(delta);
+        playerController.localPlayer.update(delta);
+
+        if (playerController.localPlayer.health <= 0) {
+            currentState = GameState.LOBBY;
+            return;
+        }
+
+        if (playerController.localPlayer.justTookDamage) {
+            playerController.localPlayer.justTookDamage = false;
+            if (playerHitSound != null) playerHitSound.play(1.0f, MathUtils.random(0.6f, 0.8f), 0f);
+        }
+
+        entityManager.updateAll(delta, players, mapManager);
+
+        // Render 3D scene to FBO
+        fbo.begin();
+        Gdx.gl.glClearColor(0.02f, 0.02f, 0.05f, 1f);
+        Gdx.gl.glClear(com.badlogic.gdx.graphics.GL20.GL_COLOR_BUFFER_BIT | com.badlogic.gdx.graphics.GL20.GL_DEPTH_BUFFER_BIT);
+
+        modelBatch.begin(camera);
+        for (ModelInstance block : mapManager.blocks) modelBatch.render(block, environment);
+        for (EnemyEntity enemy : entityManager.enemies) renderHumanoid(enemy, modelBatch, environment);
+        for (ParticleEntity p : entityManager.particles) modelBatch.render(p.instance, environment);
+        modelBatch.render(swordInstance, environment);
+        modelBatch.end();
+        fbo.end();
+
+        // Apply VFX
+        vfxManager.cleanUpBuffers();
+        vfxManager.beginInputCapture();
+        spriteBatch.begin();
+        spriteBatch.draw(fboRegion, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        spriteBatch.end();
+        vfxManager.endInputCapture();
+        vfxManager.applyEffects();
+        vfxManager.renderToScreen();
+
+        renderHUD();
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) Gdx.input.setCursorCatched(!Gdx.input.isCursorCatched());
     }
 
-    // Collect model garbage
-    private void disposeModels() {
-        if (handModel != null) handModel.dispose();
-        if (enemyModel != null) enemyModel.dispose();
-        if (particleModel != null) particleModel.dispose();
-        if (projectileModel != null) projectileModel.dispose();
+    // -- RENDER HUD --
+    private void renderHUD() {
+        shapeRenderer.getProjectionMatrix().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        shapeRenderer.updateMatrices();
+        Gdx.gl.glDisable(com.badlogic.gdx.graphics.GL20.GL_DEPTH_TEST);
+        Gdx.gl.glEnable(com.badlogic.gdx.graphics.GL20.GL_BLEND);
+        Gdx.gl.glBlendFunc(com.badlogic.gdx.graphics.GL20.GL_SRC_ALPHA, com.badlogic.gdx.graphics.GL20.GL_ONE_MINUS_SRC_ALPHA);
+
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0.05f, 0.05f, 0.08f, 0.9f);
+        shapeRenderer.rect(20, 20, 300, 25);
+        float healthPercent = Math.max(0, (float)playerController.localPlayer.health / (float)playerController.localPlayer.maxHealth);
+        shapeRenderer.setColor(0.2f, 0.8f, 1.0f, 1f);
+        shapeRenderer.rect(22, 22, (300 - 4) * healthPercent, 25 - 4);
+        shapeRenderer.end();
+        Gdx.gl.glDisable(com.badlogic.gdx.graphics.GL20.GL_BLEND);
     }
 
-    // Collect world garbage
-    private void disposeWorld() {
+    // -- RENDER HUMANOID --
+    private void renderHumanoid(EnemyEntity enemy, ModelBatch batch, Environment env) {
+        float flashAmount = enemy.damageTimer > 0 ? MathUtils.sin((enemy.damageTimer / EnemyEntity.DAMAGE_DURATION) * MathUtils.PI) : 0f;
+        tmpMatrix.idt().translate(enemy.x, enemy.y, enemy.z).rotate(Vector3.Y, enemy.rotation);
+
+        workingColor.set(Color.DARK_GRAY).lerp(hitColor, flashAmount);
+        ((ColorAttribute)torsoBrush.materials.get(0).get(ColorAttribute.Diffuse)).color.set(workingColor);
+        torsoBrush.transform.set(tmpMatrix);
+        batch.render(torsoBrush, env);
+
+        workingColor.set(Color.DARK_GRAY).lerp(hitColor, flashAmount); // Head
+        ((ColorAttribute)headBrush.materials.get(0).get(ColorAttribute.Diffuse)).color.set(workingColor);
+        headBrush.transform.set(tmpMatrix).translate(0, 0.5f, 0);
+        batch.render(headBrush, env);
+
+        workingColor.set(Color.DARK_GRAY).lerp(hitColor, flashAmount); // Limbs
+        ((ColorAttribute)limbBrush.materials.get(0).get(ColorAttribute.Diffuse)).color.set(workingColor);
+        limbBrush.transform.set(tmpMatrix).translate(-0.1f, -0.6f, 0); batch.render(limbBrush, env); // L Leg
+        limbBrush.transform.set(tmpMatrix).translate(0.1f, -0.6f, 0); batch.render(limbBrush, env); // R Leg
+        limbBrush.transform.set(tmpMatrix).translate(-0.3f, 0, 0); batch.render(limbBrush, env); // L Arm
+        limbBrush.transform.set(tmpMatrix).translate(0.3f, 0, 0); batch.render(limbBrush, env); // R Arm
+        batch.flush();
+    }
+
+    // -- RENDER LOBBY --
+    private void renderLobby() {
+        com.badlogic.gdx.utils.ScreenUtils.clear(0.05f, 0.05f, 0.08f, 1f, true);
+        if (Gdx.input.isCursorCatched()) Gdx.input.setCursorCatched(false);
+
+        shapeRenderer.getProjectionMatrix().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        shapeRenderer.updateMatrices();
+        Gdx.gl.glDisable(com.badlogic.gdx.graphics.GL20.GL_DEPTH_TEST);
+
+        float btnW = 250, btnH = 60, btnX = (Gdx.graphics.getWidth() - btnW) / 2f, btnY = (Gdx.graphics.getHeight() - btnH) / 2f;
+        float mx = Gdx.input.getX(), my = Gdx.graphics.getHeight() - Gdx.input.getY();
+        boolean hover = mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH;
+
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(hover ? new Color(0.2f, 0.8f, 1.0f, 1f) : new Color(0.1f, 0.4f, 0.6f, 1f));
+        if (hover && Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) startGame();
+        shapeRenderer.rect(btnX, btnY, btnW, btnH);
+        shapeRenderer.end();
+
+        spriteBatch.getProjectionMatrix().setToOrtho2D(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        spriteBatch.begin();
+        font.getData().setScale(1.5f);
+        font.draw(spriteBatch, "ENTER GRID", btnX + 50, btnY + 40);
+        spriteBatch.end();
+    }
+
+    @Override
+    public void resize(int width, int height) {
+        if (vfxManager != null) vfxManager.resize(width, height);
+        if (fbo != null) fbo.dispose();
+        fbo = new FrameBuffer(Pixmap.Format.RGBA8888, width, height, true);
+        fboRegion = new TextureRegion(fbo.getColorBufferTexture());
+        fboRegion.flip(false, true);
+        camera.viewportWidth = width;
+        camera.viewportHeight = height;
+        camera.update();
+    }
+
+    @Override
+    public void dispose() {
         if (modelBatch != null) modelBatch.dispose();
         if (mapManager != null) mapManager.dispose();
         if (vfxManager != null) vfxManager.dispose();
@@ -700,13 +320,16 @@ public class ExtractionGame extends ApplicationAdapter {
         if (spriteBatch != null) spriteBatch.dispose();
         if (shapeRenderer != null) shapeRenderer.dispose();
         if (font != null) font.dispose();
+        if (handModel != null) handModel.dispose();
+        if (enemyModel != null) enemyModel.dispose();
+        if (particleModel != null) particleModel.dispose();
+        if (projectileModel != null) projectileModel.dispose();
+        if (footstepSound != null) footstepSound.dispose();
+        if (hitSound != null) hitSound.dispose();
+        if (deathSound != null) deathSound.dispose();
+        if (swooshSound != null) swooshSound.dispose();
+        if (playerHitSound != null) playerHitSound.dispose();
+        if (playerShootSound != null) playerShootSound.dispose();
     }
 
-    // -- GARBAGE COLLECTION --
-    @Override
-    public void dispose() {
-        disposeWorld();
-        disposeModels();
-        disposeSounds();
-    }
 }
