@@ -33,6 +33,9 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
 public class ExtractionGame extends ApplicationAdapter {
 
+    private float handTiltX = 0f;
+    private float handTiltY = 0f;
+
     private final Vector3 tmpForward = new Vector3();
     private final Vector3 tmpRight = new Vector3();
     private final Matrix4 tmpMatrix = new Matrix4();
@@ -147,23 +150,15 @@ public class ExtractionGame extends ApplicationAdapter {
             VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
 
         // Create glowing hand
-        Color handBlue = new Color(0.4f, 0.7f, 1.0f, 1f);
-        handModel = modelBuilder.createBox(0.4f, 0.4f, 1.2f, // Dimensions: Width, Height, Length
+        Color handBlue = new Color(0.0f, 0.0f, 1.0f, 1f);
+        Color glowBlue = new Color(0.6f, 0.8f, 1.0f, 1f);
+        handModel = modelBuilder.createBox(0.4f, 0.4f, 0.8f, // Dimensions: Width, Height, Length
                 new Material(
                     ColorAttribute.createDiffuse(handBlue),
-                    ColorAttribute.createEmissive(new Color(0.6f, 0.8f, 1.0f, 1f))
+                    ColorAttribute.createEmissive(glowBlue)
                 ),
                 Usage.Position | Usage.Normal);
         swordInstance = new ModelInstance(handModel);
-
-        BoundingBox bounds = new BoundingBox();
-        swordInstance.calculateBoundingBox(bounds);
-        hiltOffsetY = -bounds.min.y;
-
-        swordInstance.materials.get(0).clear();
-        swordInstance.materials.get(0).set(ColorAttribute.createDiffuse(Color.DARK_GRAY));
-        swordInstance.materials.get(0).set(ColorAttribute.createSpecular(Color.WHITE));
-        swordInstance.materials.get(0).set(FloatAttribute.createShininess(100f));
 
         // Humanoid models
         // Torso
@@ -347,6 +342,9 @@ public class ExtractionGame extends ApplicationAdapter {
         float deltaX = -Gdx.input.getDeltaX() * mouseSensitivity;
         float deltaY = -Gdx.input.getDeltaY() * mouseSensitivity;
 
+        handTiltX += deltaX * 0.5f;
+        handTiltY += deltaY * 0.5f;
+
         localPlayer.yaw += deltaX;
         localPlayer.pitch += deltaY;
         localPlayer.pitch = MathUtils.clamp(localPlayer.pitch, -89f, 89f);
@@ -452,7 +450,8 @@ public class ExtractionGame extends ApplicationAdapter {
 
     // -- UPDATING WEAPON/CAMERA --
     private void updateCameraAndWeapon() {
-        /*
+        float delta = Gdx.graphics.getDeltaTime();
+
         camera.position.set(localPlayer.x, localPlayer.y, localPlayer.z);
         playerLight.position.set(camera.position);
         camera.direction.set(0, 0, -1);
@@ -461,38 +460,20 @@ public class ExtractionGame extends ApplicationAdapter {
         camera.direction.rotate(Vector3.Y, localPlayer.yaw);
         camera.update();
 
-        swordInstance.transform.setToTranslation(camera.position);
-        swordInstance.transform.rotate(Vector3.Y, localPlayer.yaw);
-        swordInstance.transform.rotate(Vector3.X, localPlayer.pitch);
-
-        swordInstance.transform.translate(0.5f, -0.3f, -0.8f);
-
-        if (localPlayer.isAttacking) {
-            float progress = localPlayer.attackTimer / PlayerEntity.ATTACK_DURATION;
-            float swingAngle = MathUtils.sin((float) (progress * Math.PI)) * 90f; 
-            swordInstance.transform.rotate(Vector3.X, -swingAngle);
-            swordInstance.transform.rotate(Vector3.Z, swingAngle * 0.2f);
-        }
-
-        swordInstance.transform.scale(swordScale, swordScale, swordScale);
-        swordInstance.transform.translate(0, hiltOffsetY, 0);
-
-        swordInstance.transform.translate(0.75f, -0.15f, -0.8f);
-        swordInstance.transform.rotate(Vector3.Y, 90f);
-        swordInstance.transform.rotate(Vector3.Z, -90f);
-        */
-
-        camera.position.set(localPlayer.x, localPlayer.y, localPlayer.z);
-        playerLight.position.set(camera.position);
-
-        float rightOffset = 0.6f;
-        float downOffset = -0.5f;
-        float forwardOffset = -0.8f;
+        handTiltX = MathUtils.lerp(handTiltX, 0, 10f * delta);
+        handTiltY = MathUtils.lerp(handTiltY, 0, 10f * delta);
 
         swordInstance.transform.set(camera.view).inv();
+
+        float rightOffset = 0.5f;
+        float downOffset = -0.65f;
+        float forwardOffset = -0.6f;
         swordInstance.transform.translate(rightOffset, downOffset, forwardOffset);
 
-        swordInstance.transform.translate(0, 0, localPlayer.attackOffset);
+        swordInstance.transform.rotate(Vector3.Z, handTiltX * 2f);
+        swordInstance.transform.rotate(Vector3.X, handTiltY * 2f);
+
+        swordInstance.transform.translate(0, 0, -localPlayer.attackOffset);
     }
 
     @Override
