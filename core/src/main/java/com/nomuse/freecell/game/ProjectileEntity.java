@@ -9,6 +9,7 @@ import com.badlogic.gdx.utils.Array;
 public class ProjectileEntity {
     public float x, y, z;
     public float vx, vy, vz;
+
     public float speed = 18f;
     public float damage = 25f;
     public float radius = 0.4f;
@@ -39,7 +40,7 @@ public class ProjectileEntity {
             float px = x + MathUtils.random(-0.1f, 0.1f);
             float py = y + MathUtils.random(-0.1f, 0.1f);
             float pz = y + MathUtils.random(-0.1f, 0.1f);
-            particles.add(new ParticleEntity(particleModel, px, py, pz));
+            particles.add(new ParticleEntity(particleModel, px, py, pz, ParticleEntity.TYPE_TRAIL));
         }
 
         // Check wall collision
