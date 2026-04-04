@@ -7,9 +7,9 @@ import com.badlogic.gdx.utils.Array;
 public class ProjectileEntity {
     public float x, y, z;
     public float vx, vy, vz;
-    public float speed = 25f;
+    public float speed = 15f;
     public float damage = 25f;
-    public float radius = 0.2f;
+    public float radius = 0.3f;
     public boolean isDead = false;
     public ModelInstance instance;
 
@@ -23,6 +23,8 @@ public class ProjectileEntity {
         this.vx = direction.x * speed;
         this.vy = direction.y * speed;
         this.vz = direction.z * speed;
+
+        this.instance.transform.setToTranslation(x, y, z);
     }
 
     public void update(float deltaTime, MapManager mapManager, Array<EnemyEntity> enemies) {
@@ -30,16 +32,19 @@ public class ProjectileEntity {
         y += vy * deltaTime;
         z += vz * deltaTime;
 
+        // Check wall collision
         if (mapManager.isColliding(x, z, radius)) {
             isDead = true;
             return;
         }
 
+        // Floor/ceiling bounds
         if (y <= 1.0f || y >= 4.0f) {
             isDead = true;
             return;
         }
 
+        // Check enemy collision
         for (EnemyEntity enemy : enemies) {
             float dx = enemy.x - x;
             float dy = (enemy.y + 0.5f) - y;

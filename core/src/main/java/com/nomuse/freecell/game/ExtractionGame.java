@@ -175,10 +175,11 @@ public class ExtractionGame extends ApplicationAdapter {
 
         // Create Projectile Model
         Color projCyan = new Color(0.2f, 0.9f, 1.0f, 1f);
+        Color projGlow = new Color(0.6f, 0.95f, 1.0f, 1f);
         projectileModel = modelBuilder.createSphere(0.3f, 0.3f, 0.3f, 10, 10,
             new Material(
                 ColorAttribute.createDiffuse(projCyan),
-                ColorAttribute.createEmissive(projCyan)
+                ColorAttribute.createEmissive(projGlow)
             ),
             Usage.Position | Usage.Normal);
 
@@ -580,10 +581,11 @@ public class ExtractionGame extends ApplicationAdapter {
             }
 
             Vector3 shootDir = new Vector3(camera.direction).nor();
+            Vector3 rightDir = new Vector3(shootDir).crs(Vector3.Y).nor();
 
-            float spawnX = localPlayer.x + shootDir.x * 0.5f;
-            float spawnY = camera.position.y + shootDir.y * 0.5f;
-            float spawnZ = localPlayer.z + shootDir.z * 0.5f;
+            float spawnX = localPlayer.x + (shootDir.x * 0.8f) + (rightDir.x * 0.25f);
+            float spawnY = camera.position.y + (shootDir.y * 0.8f) - 0.35f;
+            float spawnZ = localPlayer.z + (shootDir.z * 0.8f) + (rightDir.z * 0.25f);
 
             ModelInstance projInstance = new ModelInstance(projectileModel);
             projectiles.add(new ProjectileEntity(projInstance, spawnX, spawnY, spawnZ, shootDir));
