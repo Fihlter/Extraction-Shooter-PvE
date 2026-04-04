@@ -1,5 +1,7 @@
 package com.nomuse.freecell.game;
 
+import com.badlogic.gdx.math.MathUtils;
+
 public class PlayerEntity {
 
     public int id; // Network ID
@@ -9,6 +11,7 @@ public class PlayerEntity {
     // Melee combat state
     public boolean isAttacking = false;
     public float attackTimer = 0f;
+    public float attackOffset = 0f;
     public static final float ATTACK_DURATION = 0.3f;
 
     public float yVelocity = 0f;
@@ -25,9 +28,14 @@ public class PlayerEntity {
     public void update(float deltaTime) {
         if (isAttacking) {
             attackTimer += deltaTime;
+
+            float progress = attackTimer / ATTACK_DURATION;
+            attackOffset = MathUtils.sin(progress * MathUtils.PI) * 0.6f;
+
             if (attackTimer >= ATTACK_DURATION) {
                 isAttacking = false;
                 attackTimer = 0f;
+                attackOffset = 0f;
             }
         }
 

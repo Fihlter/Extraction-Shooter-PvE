@@ -6,6 +6,7 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.VertexAttributes;
+import com.badlogic.gdx.graphics.VertexAttributes.Usage;
 import com.badlogic.gdx.graphics.g3d.Environment;
 import com.badlogic.gdx.graphics.g3d.Material;
 import com.badlogic.gdx.graphics.g3d.Model;
@@ -52,7 +53,7 @@ public class ExtractionGame extends ApplicationAdapter {
     private float mouseSensitivity = 0.2f;
 
     // Visuals
-    private Model swordModel;
+    private Model handModel;
     private ModelInstance swordInstance;
     private ModelInstance torsoBrush;
     private ModelInstance headBrush;
@@ -145,9 +146,15 @@ public class ExtractionGame extends ApplicationAdapter {
             new Material(ColorAttribute.createDiffuse(Color.FIREBRICK)),
             VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
 
-        ObjLoader loader = new ObjLoader();
-        swordModel = loader.loadModel(Gdx.files.internal("sword/kamasword.obj"));
-        swordInstance = new ModelInstance(swordModel);
+        // Create glowing hand
+        Color handBlue = new Color(0.4f, 0.7f, 1.0f, 1f);
+        handModel = modelBuilder.createBox(0.4f, 0.4f, 1.2f, // Dimensions: Width, Height, Length
+                new Material(
+                    ColorAttribute.createDiffuse(handBlue),
+                    ColorAttribute.createEmissive(new Color(0.6f, 0.8f, 1.0f, 1f))
+                ),
+                Usage.Position | Usage.Normal);
+        swordInstance = new ModelInstance(handModel);
 
         BoundingBox bounds = new BoundingBox();
         swordInstance.calculateBoundingBox(bounds);
@@ -445,6 +452,7 @@ public class ExtractionGame extends ApplicationAdapter {
 
     // -- UPDATING WEAPON/CAMERA --
     private void updateCameraAndWeapon() {
+        /*
         camera.position.set(localPlayer.x, localPlayer.y, localPlayer.z);
         playerLight.position.set(camera.position);
         camera.direction.set(0, 0, -1);
@@ -472,6 +480,19 @@ public class ExtractionGame extends ApplicationAdapter {
         swordInstance.transform.translate(0.75f, -0.15f, -0.8f);
         swordInstance.transform.rotate(Vector3.Y, 90f);
         swordInstance.transform.rotate(Vector3.Z, -90f);
+        */
+
+        camera.position.set(localPlayer.x, localPlayer.y, localPlayer.z);
+        playerLight.position.set(camera.position);
+
+        float rightOffset = 0.6f;
+        float downOffset = -0.5f;
+        float forwardOffset = -0.8f;
+
+        swordInstance.transform.set(camera.view).inv();
+        swordInstance.transform.translate(rightOffset, downOffset, forwardOffset);
+
+        swordInstance.transform.translate(0, 0, localPlayer.attackOffset);
     }
 
     @Override
@@ -501,7 +522,7 @@ public class ExtractionGame extends ApplicationAdapter {
 
     // Collect model garbage
     private void disposeModels() {
-        if (swordModel != null) swordModel.dispose();
+        if (handModel != null) handModel.dispose();
         if (enemyModel != null) enemyModel.dispose();
         if (particleModel != null) particleModel.dispose();
     }
