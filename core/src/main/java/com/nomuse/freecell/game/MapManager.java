@@ -50,27 +50,33 @@ public class MapManager {
         floorModel = modelBuilder.createBox(2f, 2f, 2f,
             new Material(ColorAttribute.createDiffuse(Color.FOREST)),
             Usage.Position | Usage.Normal);
-        
+
+        Color softWhiteBlue = new Color(0.8f, 0.9f, 1.0f, 1f);
+        Color strongGlow = new Color(0.4f, 0.6f, 1.0f, 1f);
+
         wallModel = modelBuilder.createBox(2f, 2f, 2f,
-            new Material(ColorAttribute.createDiffuse(Color.GRAY)),
+            new Material(
+                ColorAttribute.createDiffuse(softWhiteBlue),
+                ColorAttribute.createEmissive(strongGlow)
+            ),
             Usage.Position | Usage.Normal);
-        
-            for (int x = -10; x < 10; x++) {
-                for (int z = -10; z < 10; z++) {
-                    int gridX = x + 10;
-                    int gridZ = z + 10;
 
-                    ModelInstance floor = new ModelInstance(floorModel);
-                    floor.transform.setToTranslation(x * 2f, 0f, z * 2f);
-                    blocks.add(floor);
+        for (int x = -10; x < 10; x++) {
+            for (int z = -10; z < 10; z++) {
+                int gridX = x + 10;
+                int gridZ = z + 10;
 
-                    if (solidGrid[gridX][gridZ]) {
-                        ModelInstance wall = new ModelInstance(wallModel);
-                        wall.transform.setToTranslation(x * 2f, 2f, z * 2f);
-                        blocks.add(wall);
-                    }
+                ModelInstance floor = new ModelInstance(floorModel);
+                floor.transform.setToTranslation(x * 2f, 0f, z * 2f);
+                blocks.add(floor);
+
+                if (solidGrid[gridX][gridZ]) {
+                    ModelInstance wall = new ModelInstance(wallModel);
+                    wall.transform.setToTranslation(x * 2f, 2f, z * 2f);
+                    blocks.add(wall);
                 }
             }
+        }
     }
 
     // Grid converters

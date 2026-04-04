@@ -13,9 +13,7 @@ import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.attributes.FloatAttribute;
-import com.badlogic.gdx.graphics.g3d.environment.DirectionalShadowLight;
 import com.badlogic.gdx.graphics.g3d.loader.ObjLoader;
-import com.badlogic.gdx.graphics.g3d.utils.DepthShaderProvider;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
@@ -24,6 +22,10 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.math.collision.BoundingBox;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.math.Matrix4;
+import com.badlogic.gdx.graphics.g3d.environment.PointLight;
+import com.crashinvaders.vfx.VfxManager;
+import com.crashinvaders.vfx.effects.BloomEffect;
+import com.badlogic.gdx.graphics.Pixmap;
 
 public class ExtractionGame extends ApplicationAdapter {
 
@@ -35,9 +37,10 @@ public class ExtractionGame extends ApplicationAdapter {
     private ModelBatch modelBatch;
     private Environment environment;
     private MapManager mapManager;
+    private PointLight playerLight;
 
-    private ModelBatch shadowBatch;
-    private DirectionalShadowLight shadowLight;
+    //private ModelBatch shadowBatch;
+    //private DirectionalShadowLight shadowLight;
 
     // Network player state
     private PlayerEntity localPlayer;
@@ -77,6 +80,10 @@ public class ExtractionGame extends ApplicationAdapter {
     private float footstepTimer = 0f;
     private static final float FOOTSTEP_INTERVAL = 0.35f;
 
+    // VFX
+    private VfxManager vfxManager;
+    private BloomEffect bloomEffect;
+
     @Override
     public void create() {
 
@@ -94,25 +101,24 @@ public class ExtractionGame extends ApplicationAdapter {
         Gdx.input.setCursorCatched(true);
 
         modelBatch = new ModelBatch();
-        shadowBatch = new ModelBatch(new DepthShaderProvider());
+        //shadowBatch = new ModelBatch(new DepthShaderProvider());
 
         ModelBuilder modelBuilder = new ModelBuilder();
         mapManager.buildVisuals(modelBuilder);
 
         // Setup environment
         environment = new Environment();
-        environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.4f, 0.4f, 0.4f, 1f));
+        environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.05f, 0.05f, 0.08f, 1f));
+        environment.add(new com.badlogic.gdx.graphics.g3d.environment.DirectionalLight().set(0.05f, 0.05f, 0.1f, -1f, -0.8f, -0.2f));
         
         // Setup sounds
         footstepSound = Gdx.audio.newSound(Gdx.files.internal("sounds/footsteps/footstep01.ogg"));
         hitSound = Gdx.audio.newSound(Gdx.files.internal("sounds/npc/hit02.wav"));
         deathSound = Gdx.audio.newSound(Gdx.files.internal("sounds/npc/npc_death.wav"));
 
-        shadowLight = new DirectionalShadowLight(4096, 4096, 45f, 45f, 1f, 300f);
-        shadowLight.set(0.8f, 0.8f, 0.8f, -1f, -0.8f, -0.2f);
-
-        environment.add(shadowLight);
-        environment.shadowMap = shadowLight;
+        // Player lantern
+        playerLight = new PointLight().set(0.7f, 0.8f, 1.0f, 0f, 0f, 0f, 12f);
+        environment.add(playerLight);
 
         // --- SPAWN ENEMIES ---
         enemies = new Array<>();
@@ -162,6 +168,14 @@ public class ExtractionGame extends ApplicationAdapter {
         torsoBrush = new ModelInstance(torsoModel);
         headBrush = new ModelInstance(headModel);
         limbBrush = new ModelInstance(limbModel);
+
+        // Post-processing pipeline
+        vfxManager = new VfxManager(Pixmap.Format.RGBA8888);
+        bloomEffect = new BloomEffect();
+
+        bloomEffect.setBloomIntensity(1.5f);
+        bloomEffect.setThreshold(0.8f);
+        vfxManager.addEffect(bloomEffect);
     }
 
     // -- HANDLE RENDERING --
@@ -171,7 +185,7 @@ public class ExtractionGame extends ApplicationAdapter {
 
         // Process Input
         handleInput(delta);
-        localPlayer.update(delta);
+        //localPlayer.update(delta);
 
         for (int i = 0; i < enemies.size; i++) {
             EnemyEntity enemy = enemies.get(i);
@@ -199,50 +213,23 @@ public class ExtractionGame extends ApplicationAdapter {
         // Update Camera
         updateCameraAndWeapon();
 
-        // Shadows
-        shadowLight.begin(camera.position, camera.direction);
-        shadowBatch.begin(shadowLight.getCamera());
+        vfxManager.cleanUpBuffers();
+        vfxManager.beginInputCapture();
 
-        for (ModelInstance block : mapManager.blocks) {
-            shadowBatch.render(block);
-        }
-
-        for (int i = 0; i < enemies.size; i++) {
-            EnemyEntity enemy = enemies.get(i);
-            renderHumanoid(enemy, shadowBatch, null);
-        }
-
-        shadowBatch.end();
-        shadowLight.end();
-
-        ScreenUtils.clear(0.5f, 0.8f, 1f, 1f, true);
-
-        modelBatch.begin(camera);
-        for (ModelInstance block : mapManager.blocks) {
-            modelBatch.render(block, environment);
-        }
-        modelBatch.end();
-
-        // Clear depth buffer to prevent clipping
-        Gdx.gl.glClear(com.badlogic.gdx.graphics.GL20.GL_DEPTH_BUFFER_BIT);
+        ScreenUtils.clear(0.02f, 0.02f, 0.05f, 1f, true);
 
         modelBatch.begin(camera);
 
-        // Draw visible humanoid enemies
-        for (int i = 0; i < enemies.size; i++) {
-            EnemyEntity enemy = enemies.get(i);
-            renderHumanoid(enemy, modelBatch, environment);
-        }
-        
-        // Draw particles
-        for (int i = 0; i < particles.size; i++) {
-            modelBatch.render(particles.get(i).instance, environment);
-        }
-
-        // Draw sword
+        for (ModelInstance block : mapManager.blocks) { modelBatch.render(block, environment); }
+        for (int i = 0; i < enemies.size; i++) { renderHumanoid(enemies.get(i), modelBatch, environment); }
+        for (int i = 0; i < particles.size; i++) { modelBatch.render(particles.get(i).instance, environment); }
         modelBatch.render(swordInstance, environment);
 
         modelBatch.end();
+
+        vfxManager.endInputCapture();
+        vfxManager.applyEffects();
+        vfxManager.renderToScreen();
 
         // Press ESC to release mouse cursor
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
@@ -431,6 +418,7 @@ public class ExtractionGame extends ApplicationAdapter {
     // -- UPDATING WEAPON/CAMERA --
     private void updateCameraAndWeapon() {
         camera.position.set(localPlayer.x, localPlayer.y, localPlayer.z);
+        playerLight.position.set(camera.position);
         camera.direction.set(0, 0, -1);
         camera.up.set(Vector3.Y);
         camera.direction.rotate(Vector3.X, localPlayer.pitch);
@@ -458,6 +446,16 @@ public class ExtractionGame extends ApplicationAdapter {
         swordInstance.transform.rotate(Vector3.Z, -90f);
     }
 
+    @Override
+    public void resize(int width, int height) {
+        if (vfxManager != null) {
+            vfxManager.resize(width, height);
+        }
+        camera.viewportWidth = width;
+        camera.viewportHeight = height;
+        camera.update();
+    }
+
     // Collect sound garbage
     private void disposeSounds() {
         if (footstepSound != null) footstepSound.dispose();
@@ -475,9 +473,9 @@ public class ExtractionGame extends ApplicationAdapter {
     // Collect world garbage
     private void disposeWorld() {
         if (modelBatch != null) modelBatch.dispose();
-        if (shadowBatch != null) shadowBatch.dispose();
-        if (shadowLight != null) shadowLight.dispose();
         if (mapManager != null) mapManager.dispose();
+        if (vfxManager != null) vfxManager.dispose();
+        if (bloomEffect != null) bloomEffect.dispose();
     }
 
     // -- GARBAGE COLLECTION --
