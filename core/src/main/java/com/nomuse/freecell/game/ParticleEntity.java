@@ -11,7 +11,7 @@ public class ParticleEntity {
     public static final int TYPE_TRAIL = 1;
 
     public ModelInstance instance;
-    public float worldX, worldY, worldZ;
+    public float x, y, z;
     public float vx, vy, vz;
     public float life, maxLife;
     public int type;
@@ -24,9 +24,9 @@ public class ParticleEntity {
         this.instance = new ModelInstance(particleModel);
         this.type = type;
 
-        this.worldX = startX;
-        this.worldY = startY;
-        this.worldZ = startZ;
+        this.x = startX;
+        this.y = startY;
+        this.z = startZ;
 
         if (type == TYPE_EXPLOSION) {
             // Explode outward
@@ -49,21 +49,21 @@ public class ParticleEntity {
     public boolean update(float deltaTime) {
 
         if (type == TYPE_EXPLOSION) {
-            vx += PlayerEntity.GRAVITY * deltaTime;
-            vx -= vx * 1.5f * deltaTime;
-            vz -= vz * 1.5f * deltaTime;
+            vx *= PlayerEntity.GRAVITY * deltaTime;
+            vx *= 0.98f;
+            vz *= 0.98f;
         } else {
-            vx -= vx * 2f * deltaTime;
-            vz -= vz * 2f * deltaTime;
+            vx *= 0.9f;
+            vz *= 0.9f;
         }
 
-        worldX += vx * deltaTime;
-        worldY += vy * deltaTime;
-        worldZ += vz * deltaTime;
+        x += vx * deltaTime;
+        y += vy * deltaTime;
+        z += vz * deltaTime;
 
         // Floor collision
-        if (worldY < 1.1f) {
-            worldY = 1.1f;
+        if (y < 1.1f) {
+            y = 1.1f;
             if (type == TYPE_EXPLOSION) {
                 vy = -vy * 0.4f;
                 vx *= 0.8f;
@@ -73,10 +73,13 @@ public class ParticleEntity {
 
         life -= deltaTime;
 
+        instance.transform.setToTranslation(x, y, z);
+
         float scale = (life / maxLife) * 0.2f;
-        if (scale > 0) scale = 0f;
-        
-        instance.transform.setToTranslation(worldX, worldY, worldZ).scale(scale, scale, scale);
+        if (scale > 0) {
+            instance.transform.scl(scale);
+        }
+
         return life <= 0;
     }
 
