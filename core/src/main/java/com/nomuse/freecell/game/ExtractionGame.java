@@ -101,6 +101,12 @@ public class ExtractionGame extends ApplicationAdapter {
     private TextureRegion fboRegion;
     private ShapeRenderer shapeRenderer;
 
+    public EnemyEntity() {
+        
+    }
+
+    public EnemyEntity(int id){}
+
     @Override
     public void create() {
 
