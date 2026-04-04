@@ -309,7 +309,7 @@ public class ExtractionGame extends ApplicationAdapter {
         // Update Projectiles
         for (int i = projectiles.size - 1; i >= 0; i--) {
             ProjectileEntity proj = projectiles.get(i);
-            proj.update(delta, mapManager, enemies);
+            proj.update(delta, mapManager, enemies, particles, particleModel);
 
             if (proj.isDead) {
                 for (int p = 0; p < 5; p++) {
@@ -584,7 +584,7 @@ public class ExtractionGame extends ApplicationAdapter {
             Vector3 rightDir = new Vector3(shootDir).crs(Vector3.Y).nor();
 
             float spawnX = localPlayer.x + (shootDir.x * 0.8f) + (rightDir.x * 0.25f);
-            float spawnY = camera.position.y + (shootDir.y * 0.8f) - 0.35f;
+            float spawnY = camera.position.y + (shootDir.y * 0.8f) - 0.25f;
             float spawnZ = localPlayer.z + (shootDir.z * 0.8f) + (rightDir.z * 0.25f);
 
             ModelInstance projInstance = new ModelInstance(projectileModel);

@@ -1,15 +1,17 @@
 package com.nomuse.freecell.game;
 
+import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
+import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Array;
 
 public class ProjectileEntity {
     public float x, y, z;
     public float vx, vy, vz;
-    public float speed = 15f;
+    public float speed = 18f;
     public float damage = 25f;
-    public float radius = 0.3f;
+    public float radius = 0.4f;
     public boolean isDead = false;
     public ModelInstance instance;
 
@@ -27,10 +29,18 @@ public class ProjectileEntity {
         this.instance.transform.setToTranslation(x, y, z);
     }
 
-    public void update(float deltaTime, MapManager mapManager, Array<EnemyEntity> enemies) {
+    public void update(float deltaTime, MapManager mapManager, Array<EnemyEntity> enemies, Array<ParticleEntity> particles, Model particleModel) {
         x += vx * deltaTime;
         y += vy * deltaTime;
         z += vz * deltaTime;
+
+        // Leave glowing trail
+        if (MathUtils.randomBoolean (0.6f)) {
+            float px = x + MathUtils.random(-0.1f, 0.1f);
+            float py = y + MathUtils.random(-0.1f, 0.1f);
+            float pz = y + MathUtils.random(-0.1f, 0.1f);
+            particles.add(new ParticleEntity(particleModel, px, py, pz));
+        }
 
         // Check wall collision
         if (mapManager.isColliding(x, z, radius)) {
@@ -39,7 +49,7 @@ public class ProjectileEntity {
         }
 
         // Floor/ceiling bounds
-        if (y <= 1.0f || y >= 4.0f) {
+        if (y <= 0.2f || y >= 10.0f) {
             isDead = true;
             return;
         }
