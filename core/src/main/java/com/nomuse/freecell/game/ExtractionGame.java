@@ -59,8 +59,8 @@ public class ExtractionGame extends ApplicationAdapter {
     private ModelInstance limbBrush;
 
     // Pre-allocate colors
-    private final Color baseTorsoColor = new Color(Color.FIREBRICK);
-    private final Color baseHeadColor = new Color(Color.MAROON);
+    private final Color baseTorsoColor = new Color(Color.DARK_GRAY);
+    private final Color baseHeadColor = new Color(Color.DARK_GRAY);
     private final Color baseLimbColor = new Color(Color.DARK_GRAY);
     private final Color hitColor = new Color(Color.RED);
     private final Color workingColor = new Color();
@@ -179,7 +179,7 @@ public class ExtractionGame extends ApplicationAdapter {
         vfxManager = new VfxManager(Pixmap.Format.RGBA8888);
         bloomEffect = new BloomEffect();
 
-        bloomEffect.setBloomIntensity(2.5f);
+        bloomEffect.setBloomIntensity(2.0f);
         bloomEffect.setThreshold(0.45f);
         vfxManager.addEffect(bloomEffect);
 
@@ -469,13 +469,16 @@ public class ExtractionGame extends ApplicationAdapter {
         swordInstance.transform.rotate(Vector3.X, 20f);
         swordInstance.transform.rotate(Vector3.Y, -16f);
 
-        swordInstance.transform.rotate(Vector3.Y, handTiltX * 2f);
-        swordInstance.transform.rotate(Vector3.Z, handTiltX * 1.5f);
-        swordInstance.transform.rotate(Vector3.X, handTiltY * 2.5f);
+        swordInstance.transform.rotate(Vector3.Y, handTiltX * 0.5f);
+        swordInstance.transform.rotate(Vector3.Z, handTiltX * 0.5f);
+        swordInstance.transform.rotate(Vector3.X, handTiltY * 0.5f);
+
+        swordInstance.transform.rotate(Vector3.X, -localPlayer.attackOffset * 60f);
+        swordInstance.transform.rotate(Vector3.Y, localPlayer.attackOffset * 30f);
+        swordInstance.transform.rotate(Vector3.Z, localPlayer.attackOffset * 40f);
 
         swordInstance.transform.translate(0, 0, -0.6f);
 
-        swordInstance.transform.translate(0, 0, -localPlayer.attackOffset);
     }
 
     @Override

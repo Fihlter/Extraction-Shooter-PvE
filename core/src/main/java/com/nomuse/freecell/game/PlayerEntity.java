@@ -12,7 +12,7 @@ public class PlayerEntity {
     public boolean isAttacking = false;
     public float attackTimer = 0f;
     public float attackOffset = 0f;
-    public static final float ATTACK_DURATION = 0.3f;
+    public static final float ATTACK_DURATION = 0.35f;
 
     public float yVelocity = 0f;
     public boolean isGrounded = true;
@@ -30,7 +30,7 @@ public class PlayerEntity {
             attackTimer += deltaTime;
 
             float progress = attackTimer / ATTACK_DURATION;
-            attackOffset = MathUtils.sin(progress * MathUtils.PI) * 0.255f;
+            attackOffset = MathUtils.sin(progress * MathUtils.PI) * 1.0f;
 
             if (attackTimer >= ATTACK_DURATION) {
                 isAttacking = false;
