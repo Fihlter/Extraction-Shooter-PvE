@@ -103,7 +103,7 @@ public class ExtractionGame extends ApplicationAdapter {
         environment.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.05f, 0.05f, 0.08f, 1f));
         environment.add(new com.badlogic.gdx.graphics.g3d.environment.DirectionalLight().set(0.05f, 0.05f, 0.1f, -1f, -0.8f, -0.2f));
 
-        playerLight = new PointLight().set(0.7f, 0.8f, 1.0f, 0f, 0f, 0f, 9f);
+        playerLight = new PointLight().set(0.3f, 0.4f, 1.0f, 0f, 0f, 0f, 4f);
         environment.add(playerLight);
     }
 
@@ -132,7 +132,7 @@ public class ExtractionGame extends ApplicationAdapter {
         vfxManager = new VfxManager(Pixmap.Format.RGBA8888);
         bloomEffect = new BloomEffect();
         bloomEffect.setBloomIntensity(2.0f);
-        bloomEffect.setThreshold(0.45f);
+        bloomEffect.setThreshold(0.25f);
         vfxManager.addEffect(bloomEffect);
 
         spriteBatch = new SpriteBatch();

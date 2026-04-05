@@ -117,11 +117,11 @@ public class MapManager {
         );
 
         floorModel = modelBuilder.createRect(
-            -21f, 1f, -21f,
-            19f, 1f, -21f,
-            19f, 1f, 19f,
-            -21f, 1f, 19f,
-            0f, 1f, 0f,
+            -21f, 1f, 19f,    // Bottom-Left
+            19f, 1f, 19f,     // Bottom-Right
+            19f, 1f, -21f,    // Top-Right
+            -21f, 1f, -21f,   // Top-Left
+            0f, 1f, 0f,       // Normal pointing UP
             floorMat,
             Usage.Position | Usage.Normal | Usage.TextureCoordinates
         );
