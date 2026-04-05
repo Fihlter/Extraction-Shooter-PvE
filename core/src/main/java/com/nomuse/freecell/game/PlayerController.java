@@ -137,7 +137,7 @@ public class PlayerController {
             float sy = camera.position.y + (shootDir.y * 0.8f) - 0.25f;
             float sz = localPlayer.z + (shootDir.z * 0.8f) + (rDir.z * 0.25f);
 
-            entityManager.spawnProjectile(new ModelInstance(projectileModel), sx, sy, sz, shootDir);
+            entityManager.spawnProjectile(new ModelInstance(projectileModel), sx, sy, sz, shootDir, hitSound);
         }
     }
 

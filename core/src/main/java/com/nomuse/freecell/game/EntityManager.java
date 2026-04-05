@@ -66,8 +66,8 @@ public class EntityManager {
         enemies.add(new EnemyEntity(randomId, x, y, z));
     }
 
-    public void spawnProjectile(ModelInstance instance, float x, float y, float z, com.badlogic.gdx.math.Vector3 dir) {
-        projectiles.add(new ProjectileEntity(instance, x, y, z, dir));
+    public void spawnProjectile(ModelInstance instance, float x, float y, float z, com.badlogic.gdx.math.Vector3 dir, Sound hitSound) {
+        projectiles.add(new ProjectileEntity(instance, x, y, z, dir, hitSound));
     }
 
     public void clearAll() {

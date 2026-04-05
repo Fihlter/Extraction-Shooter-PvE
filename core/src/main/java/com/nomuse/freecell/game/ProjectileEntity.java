@@ -1,5 +1,6 @@
 package com.nomuse.freecell.game;
 
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.math.MathUtils;
@@ -15,12 +16,14 @@ public class ProjectileEntity {
     public float radius = 0.4f;
     public boolean isDead = false;
     public ModelInstance instance;
+    public Sound hitSound;
 
-    public ProjectileEntity(ModelInstance instance, float startX, float startY, float startZ, Vector3 direction) {
+    public ProjectileEntity(ModelInstance instance, float startX, float startY, float startZ, Vector3 direction, Sound hitSound) {
         this.instance = instance;
         this.x = startX;
         this.y = startY;
         this.z = startZ;
+        this.hitSound = hitSound;
 
         // Calculate velocity
         this.vx = direction.x * speed;
@@ -66,6 +69,11 @@ public class ProjectileEntity {
 
             if (distSq < sumRadius * sumRadius) {
                 enemy.takeHit(x, z, damage);
+
+                if (hitSound != null) {
+                     hitSound.play(1.0f, MathUtils.random(0.9f, 1.1f), 0f);
+                }
+
                 isDead = true;
                 return;
             }
