@@ -17,6 +17,7 @@ public class ProjectileEntity {
     public boolean isDead = false;
     public ModelInstance instance;
     public Sound hitSound;
+    public Sound wallHitSound;
 
     public ProjectileEntity(ModelInstance instance, float startX, float startY, float startZ, Vector3 direction, Sound hitSound) {
         this.instance = instance;
@@ -24,6 +25,7 @@ public class ProjectileEntity {
         this.y = startY;
         this.z = startZ;
         this.hitSound = hitSound;
+        this.wallHitSound = wallHitSound;
 
         // Calculate velocity
         this.vx = direction.x * speed;
@@ -48,12 +50,14 @@ public class ProjectileEntity {
 
         // Check wall collision
         if (mapManager.isColliding(x, z, radius)) {
+            playWallHitSound();
             isDead = true;
             return;
         }
 
         // Floor/ceiling bounds
         if (y <= 0.2f || y >= 10.0f) {
+            playWallHitSound();
             isDead = true;
             return;
         }
@@ -80,6 +84,12 @@ public class ProjectileEntity {
         }
 
         instance.transform.setToTranslation(x, y, z);
+    }
+
+    private void playWallHitSound() {
+        if (wallHitSound != null) {
+            wallHitSound.play(0.8f, MathUtils.random(0.85f, 1.15f), 0f);
+        }
     }
 
 }
