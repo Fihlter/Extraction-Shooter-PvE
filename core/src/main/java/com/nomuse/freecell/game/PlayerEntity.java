@@ -1,6 +1,8 @@
 package com.nomuse.freecell.game;
 
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.utils.Array;
+import java.util.HashMap;
 
 public class PlayerEntity {
 
@@ -20,6 +22,11 @@ public class PlayerEntity {
     public float shootOffset = 0f;
     public static final float SHOOT_DURATION = 0.15f;
 
+    // Ammo and inventory system
+    public Array<AmmoType> ammoLoadout = new Array<>();
+    public int currentAmmoIndex = 0;
+    public HashMap<String, Integer> ammoInventory = new HashMap<>();
+
     public float maxHealth = 100f;
     public float health = 100f;
     
@@ -35,6 +42,24 @@ public class PlayerEntity {
 
     public PlayerEntity(int id) {
         this.id = id;
+
+        ammoLoadout.add(new DefaultAmmo());
+        ammoLoadout.add(new FireAmmo());
+
+        ammoInventory.put("Fire", 50);
+    }
+
+    public AmmoType getCurrentAmmo() {
+        return ammoLoadout.get(currentAmmoIndex);
+    }
+
+    public void cycleAmmo() {
+        currentAmmoIndex++;
+        if (currentAmmoIndex >= ammoLoadout.size) {
+            currentAmmoIndex = 0;
+        }
+
+        System.out.println("Switched to Ammo Type: " + getCurrentAmmo().name);
     }
 
     public void takeDamage(float damageAmount) {
@@ -67,7 +92,10 @@ public class PlayerEntity {
         // Update shooting anim
         if (isShooting) {
             shootTimer += deltaTime;
+            float currentShootDuration = getCurrentAmmo().fireCooldown;
             float progress = shootTimer / SHOOT_DURATION;
+
+            float visualProgress = Math.min(1.0f, shootTimer / 0.15f);
             shootOffset = MathUtils.sin(progress * MathUtils.PI) * 0.4f;
 
             if (shootTimer >= SHOOT_DURATION) {

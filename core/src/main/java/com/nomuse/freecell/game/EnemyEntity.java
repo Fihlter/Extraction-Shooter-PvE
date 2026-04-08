@@ -35,6 +35,10 @@ public class EnemyEntity {
     public float knockbackX = 0f;
     public float knockbackZ = 0f;
 
+    // Status effect vars
+    public float burnTimer = 0f;
+    public float burnDps = 0f;
+
     public EnemyEntity(int id, float startX, float startY, float startZ) {
         this.id = id;
         this.x = startX;
@@ -56,11 +60,28 @@ public class EnemyEntity {
         }
     }
 
+    // Apply DoT
+    public void applyBurn(float duration, float dps) {
+        this.burnTimer = duration;
+        this.burnDps = dps;
+    }
+
     // Server-side Sim Logic
     public void update(float deltaTime, Array<PlayerEntity> players, MapManager mapManager, Array<EnemyEntity> allEnemies) {
 
+        if (burnTimer > 0) {
+            burnTimer -= deltaTime;
+            health -= burnDps * deltaTime;
+            if (MathUtils.randomBoolean(0.05f)) damageTimer = 0.2f;
+        }
+
         if (attackCooldown > 0) {
             attackCooldown -= deltaTime;
+        }
+
+        if (damageTimer > 0) {
+            damageTimer -= deltaTime;
+            if (damageTimer < 0) damageTimer = 0f;
         }
 
         if (damageTimer > 0) {

@@ -23,15 +23,12 @@ public class EntityManager {
     }
 
     public void updateAll(float delta, Array<PlayerEntity> players, MapManager mapManager) {
-        
-        // Update enemies
         for (int i = enemies.size - 1; i >= 0; i--) {
             EnemyEntity enemy = enemies.get(i);
             enemy.update(delta, players, mapManager, enemies);
 
             if (enemy.health <= 0) {
                 if (deathSound != null) deathSound.play(1.0f, MathUtils.random(0.85f, 1.15f), 0f);
-
                 for (int p = 0; p < 50; p++) {
                     particles.add(new ParticleEntity(particleModel, enemy.x, enemy.y + 0.5f, enemy.z));
                 }
@@ -39,7 +36,6 @@ public class EntityManager {
             }
         }
 
-        // Update projectiles
         for (int i = projectiles.size - 1; i >= 0; i--) {
             ProjectileEntity proj = projectiles.get(i);
             proj.update(delta, mapManager, enemies, particles, particleModel);
@@ -52,7 +48,6 @@ public class EntityManager {
             }
         }
 
-        // Update particles
         for (int i = particles.size - 1; i >= 0; i--) {
             ParticleEntity p = particles.get(i);
             if (p.update(delta)) {
@@ -66,8 +61,9 @@ public class EntityManager {
         enemies.add(new EnemyEntity(randomId, x, y, z));
     }
 
-    public void spawnProjectile(ModelInstance instance, float x, float y, float z, com.badlogic.gdx.math.Vector3 dir, Sound hitSound) {
-        projectiles.add(new ProjectileEntity(instance, x, y, z, dir, hitSound));
+    // --- NEW: Added AmmoType parameter ---
+    public void spawnProjectile(ModelInstance instance, float x, float y, float z, com.badlogic.gdx.math.Vector3 dir, Sound hitSound, Sound wallHitSound, AmmoType ammo) {
+        projectiles.add(new ProjectileEntity(instance, x, y, z, dir, hitSound, wallHitSound, ammo));
     }
 
     public void clearAll() {
@@ -75,5 +71,4 @@ public class EntityManager {
         projectiles.clear();
         particles.clear();
     }
-
 }

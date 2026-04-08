@@ -35,6 +35,7 @@ public class PlayerController {
     public Sound footstepSound;
     public Sound hitSound;
     public Sound swooshSound;
+    public Sound wallHitSound;
     public Sound playerShootSound;
 
     public void update(float deltaTime) {
@@ -99,7 +100,10 @@ public class PlayerController {
     }
 
     private void handleCombat() {
-        // Melee attack (left-click)
+        if (Gdx.input.isKeyJustPressed(Input.Keys.Q)) {
+            localPlayer.cycleAmmo();
+        }
+
         if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) && !localPlayer.isAttacking) {
             localPlayer.isAttacking = true;
             localPlayer.attackTimer = 0f;
@@ -127,17 +131,36 @@ public class PlayerController {
 
         // Ranged attack (right-click)
         if (Gdx.input.isButtonJustPressed(Input.Buttons.RIGHT) && !localPlayer.isShooting && !localPlayer.isAttacking) {
-            localPlayer.isShooting = true;
-            localPlayer.shootTimer = 0f;
-            if (playerShootSound != null) playerShootSound.play(0.8f, MathUtils.random(1.4f, 1.6f), 0f);
 
-            Vector3 shootDir = new Vector3(camera.direction).nor();
-            Vector3 rDir = new Vector3(shootDir).crs(Vector3.Y).nor();
-            float sx = localPlayer.x + (shootDir.x * 0.8f) + (rDir.x * 0.25f);
-            float sy = camera.position.y + (shootDir.y * 0.8f) - 0.25f;
-            float sz = localPlayer.z + (shootDir.z * 0.8f) + (rDir.z * 0.25f);
+            AmmoType currentAmmo = localPlayer.getCurrentAmmo();
 
-            entityManager.spawnProjectile(new ModelInstance(projectileModel), sx, sy, sz, shootDir, hitSound);
+            // Check for ammo before firing
+            boolean canShoot = currentAmmo.isInfinite || (localPlayer.ammoInventory.containsKey(currentAmmo.name) &&
+                                                        localPlayer.ammoInventory.get(currentAmmo.name) > 0);
+
+            if (canShoot) {
+                // Subtract ammo if not infinite
+                if (!currentAmmo.isInfinite) {
+                    int currentCount = localPlayer.ammoInventory.get(currentAmmo.name);
+                    localPlayer.ammoInventory.put(currentAmmo.name, currentCount - 1);
+                }
+
+                localPlayer.isShooting = true;
+                localPlayer.shootTimer = 0f;
+                if (playerShootSound != null) playerShootSound.play(0.8f, MathUtils.random(1.4f, 1.6f), 0f);
+
+                Vector3 shootDir = new Vector3(camera.direction).nor();
+                Vector3 rDir = new Vector3(shootDir).crs(Vector3.Y).nor();
+                float sx = localPlayer.x + (shootDir.x * 0.8f) + (rDir.x * 0.25f);
+                float sy = camera.position.y + (shootDir.y * 0.8f) - 0.25f;
+                float sz = localPlayer.z + (shootDir.z * 0.8f) + (rDir.z * 0.25f);
+
+                entityManager.spawnProjectile(new ModelInstance(projectileModel), sx, sy, sz, shootDir, hitSound, wallHitSound, currentAmmo);
+            } else {
+                // TODO: Play empty mag sound here
+                System.out.println("Out of " + currentAmmo.name + " ammo!");
+            }
+
         }
     }
 

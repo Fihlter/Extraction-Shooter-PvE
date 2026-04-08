@@ -19,6 +19,8 @@ public class ProjectileEntity {
     public Sound hitSound;
     public Sound wallHitSound;
 
+    public AmmoType ammo;
+
     public ProjectileEntity(ModelInstance instance, float startX, float startY, float startZ, Vector3 direction, Sound hitSound) {
         this.instance = instance;
         this.x = startX;
@@ -73,6 +75,8 @@ public class ProjectileEntity {
 
             if (distSq < sumRadius * sumRadius) {
                 enemy.takeHit(x, z, damage);
+
+                ammo.onHit(enemy);
 
                 if (hitSound != null) {
                      hitSound.play(1.0f, MathUtils.random(0.9f, 1.1f), 0f);
